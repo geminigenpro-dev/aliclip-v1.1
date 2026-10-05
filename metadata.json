@@ -1,0 +1,6 @@
+{
+  "name": "AliClip • Cuentas Premium & Membresías IA",
+  "description": "Tienda digital oficial de AliClip. Membresías de ChatGPT Plus, Streaming 4K, Claude Pro, Midjourney y Canva Pro con entrega en 3 minutos por WhatsApp en Perú.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

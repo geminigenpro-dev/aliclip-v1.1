@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A digital subscription or service product in the store",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the product"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the digital service (e.g., ChatGPT Plus, Netflix 4K)"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["ai", "streaming", "utility"],
+          "description": "Category of the product"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Badge tag describing features (e.g., GPT-4o, 4K UHD)"
+        },
+        "desc": {
+          "type": "string",
+          "description": "Brief description of the service"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL or base64 data for the product logo"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Lucide icon identifier fallback"
+        },
+        "available": {
+          "type": "boolean",
+          "description": "Whether the product is currently active and available"
+        },
+        "plans": {
+          "type": "array",
+          "description": "Pricing plans available for this product"
+        },
+        "order": {
+          "type": "number",
+          "description": "Display order index"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["name", "category", "desc", "available", "plans"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Global store branding, configuration and announcements",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Commercial brand primary name"
+        },
+        "suffix": {
+          "type": "string",
+          "description": "Brand suffix"
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Brand tagline or subtitle"
+        },
+        "whatsappNumber": {
+          "type": "string",
+          "description": "Official sales WhatsApp phone number without spaces"
+        },
+        "whatsappDisplay": {
+          "type": "string",
+          "description": "Display format for the official WhatsApp number"
+        },
+        "announcement": {
+          "type": "string",
+          "description": "Top announcement marquee text"
+        },
+        "colorPrimary": {
+          "type": "string",
+          "description": "Hex code for primary brand color"
+        },
+        "colorAccent": {
+          "type": "string",
+          "description": "Hex code for accent brand color"
+        },
+        "creatorUrl": {
+          "type": "string",
+          "description": "Profile URL of the creator"
+        },
+        "creatorHandle": {
+          "type": "string",
+          "description": "Handle text of the creator"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["name", "suffix", "whatsappNumber"]
+    },
+    "Claim": {
+      "title": "Claim",
+      "description": "Formal customer claim or complaint for Indecopi virtual book",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Correlative code (e.g. LR-2026-0042)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Customer full name"
+        },
+        "document": {
+          "type": "string",
+          "description": "DNI or CE document number"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone or WhatsApp"
+        },
+        "email": {
+          "type": "string",
+          "description": "Customer email address"
+        },
+        "service": {
+          "type": "string",
+          "description": "Purchased service name"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Reclamo", "Queja"],
+          "description": "Type of complaint"
+        },
+        "description": {
+          "type": "string",
+          "description": "Details of the incident"
+        },
+        "request": {
+          "type": "string",
+          "description": "Customer requested solution"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_review", "resolved"],
+          "description": "Resolution status"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["code", "name", "document", "email", "service", "description", "request"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": {
+        "$ref": "#/entities/Product"
+      },
+      "description": "Digital products and streaming memberships available in the store"
+    },
+    "/settings/store": {
+      "schema": {
+        "$ref": "#/entities/StoreSettings"
+      },
+      "description": "Global store configuration and customization"
+    },
+    "/claims/{claimId}": {
+      "schema": {
+        "$ref": "#/entities/Claim"
+      },
+      "description": "Registered Indecopi consumer complaints"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "AliClip Digital Store Catalog",
+  "description": "Catálogo oficial de cuentas premium y membresías IA en Perú",
+  "url": "https://aliclip.site",
+  "currency": "PEN",
+  "items": [
+    {
+      "id": "prod_chatgpt",
+      "name": "ChatGPT Plus",
+      "category": "Artificial Intelligence",
+      "min_price": 45.0,
+      "currency": "PEN",
+      "delivery_time": "3 minutes",
+      "availability": "InStock"
+    },
+    {
+      "id": "prod_netflix",
+      "name": "Netflix Ultra HD 4K",
+      "category": "Streaming Video",
+      "min_price": 15.0,
+      "currency": "PEN",
+      "delivery_time": "3 minutes",
+      "availability": "InStock"
+    },
+    {
+      "id": "prod_claude",
+      "name": "Claude Pro",
+      "category": "Artificial Intelligence",
+      "min_price": 15.0,
+      "currency": "PEN",
+      "delivery_time": "3 minutes",
+      "availability": "InStock"
+    },
+    {
+      "id": "prod_canva",
+      "name": "Canva Pro",
+      "category": "Design & Productivity",
+      "min_price": 12.0,
+      "currency": "PEN",
+      "delivery_time": "3 minutes",
+      "availability": "InStock"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "projectId": "alixplay-store-web",
+  "appId": "1:26438871352:web:0b5a41dafbef8db4e639cd",
+  "apiKey": "AIzaSyAzNLYJqHVkdFfWcRYn2Mi4ylhdiFsgkGk",
+  "authDomain": "alixplay-store-web.firebaseapp.com",
+  "databaseURL": "https://alixplay-store-web-default-rtdb.firebaseio.com",
+  "storageBucket": "alixplay-store-web.firebasestorage.app",
+  "messagingSenderId": "26438871352",
+  "measurementId": "G-1S28GEQYXY"
+}
