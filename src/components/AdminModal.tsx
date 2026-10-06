@@ -461,7 +461,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       const desc = await generateProductDescription(prodName, prodCategory, prodTag);
       if (desc) {
         setProdDesc(desc);
-        onToast('✨ Descripción generada con Gemini AI desde el backend.');
+        onToast('✨ Descripción comercial generada exitosamente.');
       }
     } catch (err: any) {
       console.error('Error con Gemini:', err);

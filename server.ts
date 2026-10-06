@@ -56,7 +56,7 @@ app.post('/api/gemini/generate', async (req: Request, res: Response) => {
 
     const ai = getGeminiClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: systemInstruction ? { systemInstruction } : undefined,
     });
@@ -92,7 +92,7 @@ Instrucciones:
 - No incluyas comillas ni texto adicional. Solo la descripción.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
     });
 

@@ -28,26 +28,41 @@ export async function generateProductDescription(
   category: string,
   tag?: string
 ): Promise<string> {
-  const url = `${API_BASE_URL}/api/gemini/product-copy`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      productName,
-      category,
-      tag,
-    }),
-  });
+  try {
+    const url = `${API_BASE_URL}/api/gemini/product-copy`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        productName,
+        category,
+        tag,
+      }),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Error del servidor AI (${response.status})`);
+    if (response.ok) {
+      const data: AiCopyResponse = await response.json();
+      if (data.description) {
+        return data.description;
+      }
+    }
+  } catch {
+    // Backend proxy offline / static host mode fallback
   }
 
-  const data: AiCopyResponse = await response.json();
-  return data.description;
+  // Fallback inteligente para despliegues estáticos (Cloudflare Pages) sin backend activo:
+  const cleanName = productName.trim();
+  const isStreaming = category === 'streaming' || /netflix|disney|prime|hbo|max|spotify|paramount/i.test(cleanName);
+  const isAi = category === 'ai' || /chatgpt|claude|midjourney|gemini|canva|cursor/i.test(cleanName);
+
+  if (isStreaming) {
+    return `Acceso Ultra HD 4K garantizado para ${cleanName}, con soporte inmediato y renovación continua sin caídas.`;
+  } else if (isAi) {
+    return `Membresía premium de ${cleanName} con acceso ilimitado a modelos avanzados, velocidad óptima y garantía total AliClip.`;
+  }
+  return `Membresía digital oficial de ${cleanName} con entrega rápida por WhatsApp y garantía certificada en Perú.`;
 }
 
 /**

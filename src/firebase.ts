@@ -1,10 +1,22 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
 
-export const app = initializeApp(firebaseConfig);
+// Firebase client configuration with optional environment variable overrides
+const resolvedFirebaseConfig = {
+  ...firebaseConfig,
+  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string) || firebaseConfig.apiKey,
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) || firebaseConfig.authDomain,
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || firebaseConfig.projectId,
+  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) || firebaseConfig.storageBucket,
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || firebaseConfig.messagingSenderId,
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) || firebaseConfig.appId,
+  measurementId: (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string) || (firebaseConfig as any).measurementId,
+};
+
+export const app = initializeApp(resolvedFirebaseConfig);
 
 // Initialize Firestore (handles named DB or default project database)
 const dbId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
@@ -80,26 +92,8 @@ export async function uploadFileToFirebaseStorage(file: File | Blob, path: strin
   try {
     return await Promise.race([uploadPromise, timeoutPromise]);
   } catch (err) {
-    console.warn('Firebase Storage upload failed or timed out, falling back to base64:', err);
     throw err;
   }
 }
-
-// Validate Connection to Firestore on startup
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log('Firestore connected successfully to project:', firebaseConfig.projectId);
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error('Please check your Firebase configuration: client is offline.');
-    } else {
-      // Non-fatal if test doc does not exist, connection is alive
-      console.log('Firestore connection verified.');
-    }
-  }
-}
-
-testConnection();
 
 export { signInWithPopup, signOut };

@@ -9,6 +9,7 @@
     "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
+    "deploy": "wrangler pages deploy dist",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
