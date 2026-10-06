@@ -2851,6 +2851,33 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       {brandSettings.heroCarouselRatingVary !== false ? 'Dinámico' : 'Estático'}
                     </span>
                   </div>
+
+                  {/* Selector de Modo de Activaciones por Ventas */}
+                  <div className="pt-1.5 border-t border-purple-200 dark:border-purple-900/40">
+                    <label className="block text-[9.5px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                      Cálculo de Activaciones por Ventas de cada Plataforma
+                    </label>
+                    <select
+                      value={brandSettings.heroCarouselActivationsMode || 'sales_additive'}
+                      onChange={(e) =>
+                        setBrandSettings({
+                          ...brandSettings,
+                          heroCarouselActivationsMode: e.target.value as any,
+                        })
+                      }
+                      className="w-full px-2 py-1 text-xs font-bold rounded-lg border border-purple-300 dark:border-purple-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+                    >
+                      <option value="sales_additive">
+                        🔥 Dinámico: Base + Ventas Confirmadas de cada Plataforma
+                      </option>
+                      <option value="sales_direct">
+                        📊 Conteo Directo: Mostrar solo ventas confirmadas (+X Activaciones)
+                      </option>
+                      <option value="fixed">
+                        🔒 Fijo: Mostrar texto fijo sin sumar ventas
+                      </option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

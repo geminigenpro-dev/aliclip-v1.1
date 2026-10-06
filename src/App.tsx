@@ -401,6 +401,7 @@ export default function App() {
       <Hero
         settings={settings}
         products={products}
+        sales={sales}
         onSelectProduct={handleDirectBuyFromCard}
       />
 

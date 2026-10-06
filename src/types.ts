@@ -125,6 +125,7 @@ export interface StoreSettings {
   heroCarouselInstantBadge?: string;
   heroCarouselGuaranteeText?: string;
   heroCarouselActivationsText?: string;
+  heroCarouselActivationsMode?: 'sales_additive' | 'sales_direct' | 'fixed';
   heroCarouselBaseRating?: string;
   heroCarouselRatingVary?: boolean;
   heroCarouselFromText?: string;

@@ -479,6 +479,36 @@ export const AdminTextsTab: React.FC<AdminTextsTabProps> = ({
                     {localSettings.heroCarouselRatingVary !== false ? 'Activo (Rating dinámico)' : 'Fijo (Mismo rating)'}
                   </span>
                 </div>
+
+                {/* Modo de cálculo de Activaciones según Ventas Confirmadas */}
+                <div className="pt-2 border-t border-purple-500/20 space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-200 uppercase">
+                    Comportamiento de Activaciones por Ventas de cada Plataforma
+                  </label>
+                  <select
+                    value={localSettings.heroCarouselActivationsMode || 'sales_additive'}
+                    onChange={(e) =>
+                      setLocalSettings({
+                        ...localSettings,
+                        heroCarouselActivationsMode: e.target.value as any,
+                      })
+                    }
+                    className="w-full px-3 py-1.5 text-xs font-bold rounded-xl border border-purple-300 dark:border-purple-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="sales_additive">
+                      🔥 Dinámico en Vivo: Base + Ventas Confirmadas de cada Plataforma (Recomendado)
+                    </option>
+                    <option value="sales_direct">
+                      📊 Conteo Directo: Mostrar solo el número de ventas confirmadas (ej: +8 Activaciones)
+                    </option>
+                    <option value="fixed">
+                      🔒 Fijo: Mostrar siempre el texto configurado sin variar por ventas
+                    </option>
+                  </select>
+                  <p className="text-[9.5px] text-slate-500 dark:text-slate-400">
+                    Al confirmar ventas en el panel, el contador de la plataforma correspondiente sube automáticamente en tiempo real.
+                  </p>
+                </div>
               </div>
             </div>
           )}

@@ -24,20 +24,58 @@ import {
   Glasses,
   MonitorPlay,
 } from 'lucide-react';
-import { StoreSettings, Product, ProductPlan } from '../types';
+import { StoreSettings, Product, ProductPlan, SaleRecord } from '../types';
+
+// Conteo de ventas confirmadas para un producto o plataforma
+export const getProductSalesCount = (product: Product, sales: SaleRecord[] = []): number => {
+  if (!sales || sales.length === 0) return 0;
+  const pId = (product.id || '').toLowerCase().trim();
+  const pName = (product.name || '').toLowerCase().trim();
+
+  return sales.filter((s) => {
+    // 1. Coincidencia directa de ID
+    if (s.productId && s.productId.toLowerCase().trim() === pId) return true;
+
+    // 2. Coincidencia por nombre o alias clave de plataforma
+    if (s.productName) {
+      const sName = s.productName.toLowerCase().trim();
+      if (sName === pName) return true;
+      if (sName.includes(pName) || pName.includes(sName)) return true;
+
+      const keywords = [
+        'chatgpt', 'netflix', 'canva', 'claude', 'disney', 'spotify',
+        'youtube', 'prime', 'max', 'hbo', 'midjourney', 'capcut',
+        'gemini', 'runway', 'elevenlabs', 'leonardo', 'crunchyroll',
+        'paramount', 'apple', 'office', 'windows'
+      ];
+      for (const kw of keywords) {
+        if (pName.includes(kw) && sName.includes(kw)) return true;
+      }
+    }
+    return false;
+  }).length;
+};
+
+// Formato de miles con punto (ej: 2.400, 3.150)
+const formatNumberWithDots = (num: number): string => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
 
 interface HeroProps {
   settings: StoreSettings;
   products?: Product[];
+  sales?: SaleRecord[];
   onSelectProduct?: (product: Product, plan: ProductPlan) => void;
 }
 
 export const Hero: React.FC<HeroProps> = ({
   settings,
   products = [],
+  sales = [],
   onSelectProduct,
 }) => {
   // Filter top "+ Vendidos" products for the integrated dynamic hero slider
+  // Ordenados prioritariamente por número de ventas confirmadas en vivo
   const bestSellers = React.useMemo(() => {
     if (!products || products.length === 0) return [];
 
@@ -61,8 +99,17 @@ export const Hero: React.FC<HeroProps> = ({
     });
 
     const selected = tagged.length >= 3 ? tagged : products;
-    return selected.slice(0, 8);
-  }, [products]);
+
+    // Ordenar de mayor a menor según el número de ventas confirmadas de cada plataforma
+    const sorted = [...selected].sort((a, b) => {
+      const salesA = getProductSalesCount(a, sales);
+      const salesB = getProductSalesCount(b, sales);
+      if (salesB !== salesA) return salesB - salesA;
+      return (a.order || 99) - (b.order || 99);
+    });
+
+    return sorted.slice(0, 8);
+  }, [products, sales]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [clickedId, setClickedId] = useState<string | null>(null);
@@ -123,12 +170,88 @@ export const Hero: React.FC<HeroProps> = ({
     if (settings.heroCarouselRatingVary === false) {
       return settings.heroCarouselBaseRating || '4.9';
     }
+    const salesCount = getProductSalesCount(item, sales);
+    // Plataformas líderes con más ventas confirmadas obtienen calificaciones estelares
+    if (salesCount >= 3) return '5.0';
+    if (salesCount >= 2) return '4.95';
     return RATING_VARIATIONS[idx % RATING_VARIATIONS.length];
   };
 
+  // El número de activaciones varía según el número de confirmaciones de ventas realizadas de cada plataforma
   const getItemActivations = (item: Product, _idx: number): string => {
-    if (item.activationsCount) return String(item.activationsCount);
-    return settings.heroCarouselActivationsText || '+2.400 Activaciones';
+    const confirmedCount = getProductSalesCount(item, sales);
+    const mode = settings.heroCarouselActivationsMode || 'sales_additive';
+
+    if (mode === 'fixed') {
+      return item.activationsCount
+        ? String(item.activationsCount)
+        : (settings.heroCarouselActivationsText || '+2.400 Activaciones');
+    }
+
+    if (mode === 'sales_direct') {
+      return `+${confirmedCount} Activaciones`;
+    }
+
+    // Modo principal (sales_additive):
+    // Cada plataforma parte de una base ponderada y suma en vivo cada venta confirmada
+    const baseText = settings.heroCarouselActivationsText || '+2.400 Activaciones';
+    const numMatch = baseText.replace(/\./g, '').match(/\d+/);
+    const globalBase = numMatch ? parseInt(numMatch[0], 10) : 2400;
+
+    // Volúmenes de base iniciales reconocidos por plataforma comercial
+    const platformWeights: Record<string, number> = {
+      prod_netflix: 3120,
+      prod_chatgpt: 2400,
+      prod_canva: 1880,
+      prod_spotify: 2140,
+      prod_youtube: 1760,
+      prod_disney: 1450,
+      prod_midjourney: 1310,
+      prod_claude: 1140,
+      prod_prime: 1230,
+      prod_max: 1370,
+      prod_gemini: 980,
+      prod_capcut: 1610,
+      prod_apple_music: 1090,
+      prod_crunchyroll: 1240,
+      prod_runway: 880,
+      prod_elevenlabs: 910,
+      prod_leonardo: 830,
+    };
+
+    let baseActivations = platformWeights[item.id];
+    if (!baseActivations) {
+      const lower = (item.name || '').toLowerCase();
+      if (lower.includes('netflix')) baseActivations = 3120;
+      else if (lower.includes('chatgpt')) baseActivations = 2400;
+      else if (lower.includes('canva')) baseActivations = 1880;
+      else if (lower.includes('spotify')) baseActivations = 2140;
+      else if (lower.includes('youtube')) baseActivations = 1760;
+      else if (lower.includes('disney')) baseActivations = 1450;
+      else if (lower.includes('midjourney')) baseActivations = 1310;
+      else if (lower.includes('claude')) baseActivations = 1140;
+      else {
+        // Variación determinística según hash de ID
+        const offset = ((item.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 7) - 3) * 160;
+        baseActivations = Math.max(500, globalBase + offset);
+      }
+    }
+
+    // Si el producto tiene un número explícito personalizado en su ficha, respetarlo como base
+    if (item.activationsCount) {
+      const explicitNum = String(item.activationsCount).replace(/\./g, '').match(/\d+/);
+      if (explicitNum) {
+        baseActivations = parseInt(explicitNum[0], 10);
+      }
+    }
+
+    // SUMAR EL NÚMERO DE VENTAS CONFIRMADAS DE CADA PLATAFORMA
+    const totalActivations = baseActivations + confirmedCount;
+    const formattedNum = formatNumberWithDots(totalActivations);
+
+    // Conservar el sufijo (ej: "Activaciones" o texto configurado por el usuario)
+    const suffix = baseText.replace(/[+\d.,]/g, '').trim() || 'Activaciones';
+    return `+${formattedNum} ${suffix}`;
   };
 
   const renderIcon = (iconName?: string) => {
