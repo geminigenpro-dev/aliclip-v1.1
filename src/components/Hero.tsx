@@ -115,6 +115,22 @@ export const Hero: React.FC<HeroProps> = ({
     setCurrentIndex((prev) => (prev + 1) % bestSellers.length);
   };
 
+  // Calificaciones realistas que varían de forma dinámica entre productos en el carrusel
+  const RATING_VARIATIONS = ['4.9', '5.0', '4.8', '4.95', '5.0', '4.85', '4.9', '4.92'];
+
+  const getItemRating = (item: Product, idx: number): string => {
+    if (item.rating) return String(item.rating);
+    if (settings.heroCarouselRatingVary === false) {
+      return settings.heroCarouselBaseRating || '4.9';
+    }
+    return RATING_VARIATIONS[idx % RATING_VARIATIONS.length];
+  };
+
+  const getItemActivations = (item: Product, _idx: number): string => {
+    if (item.activationsCount) return String(item.activationsCount);
+    return settings.heroCarouselActivationsText || '+2.400 Activaciones';
+  };
+
   const renderIcon = (iconName?: string) => {
     const iconClass = 'w-7 h-7 sm:w-8 sm:h-8 text-purple-400';
     switch (iconName) {
@@ -300,7 +316,7 @@ export const Hero: React.FC<HeroProps> = ({
                           {/* Rank Badge */}
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.5)] flex items-center gap-1">
                             <Flame className="w-3 h-3 fill-white" />
-                            <span>#{currentIndex + 1} Más Vendido</span>
+                            <span>#{currentIndex + 1} {settings.heroCarouselRankBadge || 'Más Vendido'}</span>
                           </span>
 
                           {currentItem.tag && (
@@ -311,7 +327,7 @@ export const Hero: React.FC<HeroProps> = ({
 
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 flex items-center gap-1">
                             <Zap className="w-2.5 h-2.5 text-emerald-400" />
-                            <span>Inmediato</span>
+                            <span>{settings.heroCarouselInstantBadge || 'Inmediato'}</span>
                           </span>
                         </div>
 
@@ -328,11 +344,11 @@ export const Hero: React.FC<HeroProps> = ({
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-0.5">
                           <span className="text-[10.5px] font-bold text-slate-300 flex items-center gap-1 bg-white/5 border border-purple-500/20 px-2 py-0.5 rounded-lg">
                             <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                            Garantía 100%
+                            {settings.heroCarouselGuaranteeText || 'Garantía 100%'}
                           </span>
                           <span className="text-[10.5px] font-bold text-amber-300 flex items-center gap-1 bg-white/5 border border-purple-500/20 px-2 py-0.5 rounded-lg">
                             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                            4.9 (2,400+ activaciones)
+                            {getItemRating(currentItem, currentIndex)} ({getItemActivations(currentItem, currentIndex)})
                           </span>
                         </div>
                       </div>
@@ -356,7 +372,7 @@ export const Hero: React.FC<HeroProps> = ({
 
                         <div className="text-center">
                           <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
-                            Desde
+                            {settings.heroCarouselFromText || 'Desde'}
                           </span>
                           <div className="text-lg font-black text-white leading-none">
                             {primaryPlan.price}
@@ -375,7 +391,7 @@ export const Hero: React.FC<HeroProps> = ({
                           className="w-full px-3 py-1.5 rounded-xl font-black text-[11px] text-white bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 shadow-[0_0_15px_rgba(236,72,153,0.5)] transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                         >
                           <Sparkles className="w-3 h-3 text-amber-300" />
-                          <span>Obtener</span>
+                          <span>{settings.heroCarouselCtaText || 'Obtener'}</span>
                           <ArrowRight className="w-3 h-3" />
                         </button>
                       </div>
@@ -385,7 +401,7 @@ export const Hero: React.FC<HeroProps> = ({
                   {/* Progress Dots inside Banner */}
                   <div className="mt-3 pt-2.5 border-t border-purple-500/20 flex items-center justify-between text-[10.5px]">
                     <span className="text-slate-400 text-[10px]">
-                      Clic en el banner para adquirir al instante
+                      {settings.heroCarouselHintText || 'Clic en el banner para adquirir al instante'}
                     </span>
 
                     <div className="flex items-center gap-1">

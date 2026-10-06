@@ -24,6 +24,8 @@ export interface Product {
   customSpecs?: string[];
   customHighlights?: string[];
   order?: number;
+  rating?: string | number; // Rating individual del producto (ej: 4.9, 5.0)
+  activationsCount?: string | number; // Activaciones del producto (ej: +2.400)
   updatedAt?: string;
 }
 
@@ -60,6 +62,16 @@ export interface PaymentMethod {
   order?: number;
 }
 
+export interface BenefitsTickerItemSetting {
+  text: string;
+  sub: string;
+}
+
+export interface FaqItemSetting {
+  question: string;
+  answer: string;
+}
+
 export interface StoreSettings {
   name: string;
   suffix: string;
@@ -94,8 +106,12 @@ export interface StoreSettings {
   logoBase64?: string;
   faviconBase64?: string;
   paymentMethods?: PaymentMethod[];
-  reviewsBadgeText?: string;
-  // Banner Principal (Hero) Personalizable
+
+  // 1. Navbar & Anuncios
+  navbarCtaText?: string;
+  searchPlaceholder?: string;
+
+  // 2. Banner Principal (Hero) Personalizable
   heroBadgeText?: string;
   heroTitlePrefix?: string;
   heroTitleHighlight?: string;
@@ -105,6 +121,83 @@ export interface StoreSettings {
   heroRatingText?: string;
   heroCtaText?: string;
   heroShowcaseTitle?: string;
+  heroCarouselRankBadge?: string;
+  heroCarouselInstantBadge?: string;
+  heroCarouselGuaranteeText?: string;
+  heroCarouselActivationsText?: string;
+  heroCarouselBaseRating?: string;
+  heroCarouselRatingVary?: boolean;
+  heroCarouselFromText?: string;
+  heroCarouselCtaText?: string;
+  heroCarouselHintText?: string;
+
+  // 3. Cinta de Beneficios (LED Ticker)
+  tickerItems?: BenefitsTickerItemSetting[];
+
+  // 4. Catálogo & Filtros de Productos
+  catalogTitle?: string;
+  categoryTabAll?: string;
+  categoryTabAi?: string;
+  categoryTabStreaming?: string;
+  catalogStatusText?: string;
+  catalogEmptyTitle?: string;
+  catalogEmptyDesc?: string;
+  catalogEmptyResetText?: string;
+
+  // 5. Proceso de Compra (4 Pasos)
+  processSectionBadge?: string;
+  processSectionTitle?: string;
+  processSectionWaLink?: string;
+  processStep1Title?: string;
+  processStep1Desc?: string;
+  processStep2Title?: string;
+  processStep2Desc?: string;
+  processStep3Title?: string;
+  processStep3Desc?: string;
+  processStep4Title?: string;
+  processStep4Desc?: string;
+
+  // 6. Métodos de Pago
+  paymentSectionBadge?: string;
+  paymentSectionTitle?: string;
+  paymentSectionSubtitle?: string;
+  paymentCardBtnText?: string;
+
+  // 7. Opiniones & Reseñas
+  reviewsBadgeText?: string;
+  reviewsSectionTitlePrefix?: string;
+  reviewsSectionTitleHighlight?: string;
+  reviewsSectionDescription?: string;
+  reviewsBtnText?: string;
+  reviewsStat1Title?: string;
+  reviewsStat1Sub?: string;
+  reviewsStat2Title?: string;
+  reviewsStat2Sub?: string;
+  reviewsStat3Title?: string;
+  reviewsStat3Sub?: string;
+
+  // 8. Preguntas Frecuentes (FAQ)
+  faqSectionBadge?: string;
+  faqSectionTitle?: string;
+  faqSectionDescription?: string;
+  faqItems?: FaqItemSetting[];
+
+  // 9. Pie de Página (Footer)
+  footerSlogan?: string;
+  footerHours?: string;
+  footerTrustNote?: string;
+  footerPaymentTitle?: string;
+  footerPaymentDesc?: string;
+  footerPaymentValidation?: string;
+  footerCopyright?: string;
+  footerSubtitle?: string;
+
+  // 10. Términos y Condiciones
+  termsModalTitle?: string;
+  termsModalSubtitle?: string;
+  termsCommitmentTitle?: string;
+  termsCommitmentText?: string;
+
   updatedAt?: string;
 }
 

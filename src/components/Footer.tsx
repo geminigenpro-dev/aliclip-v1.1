@@ -111,7 +111,7 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm">
-              Tu tienda digital de confianza para membresías de Inteligencia Artificial y Streaming en Perú. Entrega ágil y garantía total certificada.
+              {settings.footerSlogan || 'Tu tienda digital de confianza para membresías de Inteligencia Artificial y Streaming en Perú. Entrega ágil y garantía total certificada.'}
             </p>
 
             {/* Direct WhatsApp Action & Availability */}
@@ -133,7 +133,7 @@ export const Footer: React.FC<FooterProps> = ({
 
               <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                 <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                <span>Atención: Lunes a Domingo, 8:00 AM - 11:30 PM</span>
+                <span>{settings.footerHours || 'Atención: Lunes a Domingo, 8:00 AM - 11:30 PM'}</span>
               </div>
             </div>
           </div>
@@ -187,7 +187,7 @@ export const Footer: React.FC<FooterProps> = ({
 
               <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
                 <Lock className="w-3 h-3 text-emerald-500 shrink-0" />
-                <span>Transacciones seguras y validadas al instante</span>
+                <span>{settings.footerTrustNote || 'Transacciones seguras y validadas al instante'}</span>
               </div>
             </div>
           </div>
@@ -195,11 +195,11 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Col 3: Métodos de Pago Disponibles */}
           <div className="space-y-3.5">
             <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-xs flex items-center gap-1.5">
-              <span>Métodos de Pago</span>
+              <span>{settings.footerPaymentTitle || 'Métodos de Pago'}</span>
             </h3>
 
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Aceptamos transferencias inmediatas sin comisiones ocultas para tu comodidad:
+              {settings.footerPaymentDesc || 'Aceptamos transferencias inmediatas sin comisiones ocultas para tu comodidad:'}
             </p>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -216,7 +216,7 @@ export const Footer: React.FC<FooterProps> = ({
 
             <div className="pt-1">
               <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">
-                Validación de comprobante en menos de 2 minutos vía WhatsApp.
+                {settings.footerPaymentValidation || 'Validación de comprobante en menos de 2 minutos vía WhatsApp.'}
               </span>
             </div>
           </div>
@@ -226,10 +226,10 @@ export const Footer: React.FC<FooterProps> = ({
         <div className="mt-10 pt-6 border-t border-slate-200/80 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
           <div className="text-center sm:text-left space-y-0.5">
             <p className="font-semibold text-slate-700 dark:text-slate-300">
-              © 2026 Aliclip. Todos los derechos reservados.
+              {settings.footerCopyright || `© 2026 ${settings.name}${settings.suffix}. Todos los derechos reservados.`}
             </p>
             <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-              Digital Store • Hecho con ❤️ Lima-Perú
+              {settings.footerSubtitle || 'Digital Store • Hecho con ❤️ Lima-Perú'}
             </p>
           </div>
 

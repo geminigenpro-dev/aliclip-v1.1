@@ -11,7 +11,7 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Product, StoreSettings, Claim, PaymentMethod, SaleRecord } from '../types';
+import { Product, StoreSettings, Claim, PaymentMethod, SaleRecord, BenefitsTickerItemSetting, FaqItemSetting } from '../types';
 import { resizeAndCompressImageToBase64, isSafeFirestoreImageSize } from '../utils/imageCompressor';
 
 export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
@@ -307,6 +307,38 @@ export const INITIAL_PRODUCTS: Product[] = [
   }
 ];
 
+export const DEFAULT_TICKER_ITEMS: BenefitsTickerItemSetting[] = [
+  { text: 'ENTREGA EN 3 MINUTOS', sub: 'ACTIVACIÓN INMEDIATA' },
+  { text: 'GARANTÍA 100% ACTIVA', sub: 'REPOSICIÓN INMEDIATA' },
+  { text: 'PERFILES 100% PRIVADOS', sub: 'CON PIN PERSONAL' },
+  { text: 'PAGOS YAPE, PLIN & BCP', sub: 'CERO COMISIONES' },
+  { text: 'CUENTAS RENOVABLES', sub: 'SIN PERDER HISTORIAL' },
+  { text: 'SOPORTE WHATSAPP 24/7', sub: 'ATENCIÓN DEDICADA' },
+];
+
+export const DEFAULT_FAQ_ITEMS: FaqItemSetting[] = [
+  {
+    question: '¿En cuánto tiempo entregan la cuenta tras realizar el pago?',
+    answer:
+      'El tiempo promedio de activación es de 2 a 5 minutos una vez enviado el comprobante a nuestro WhatsApp oficial. Nuestro equipo está conectado de lunes a domingo.',
+  },
+  {
+    question: '¿Las cuentas de ChatGPT Plus y Claude Pro son privadas o compartidas?',
+    answer:
+      'Ofrecemos ambas opciones claramente identificadas: Cuentas 100% privadas (con tu correo o correo exclusivo nuevo) y Perfiles VIP compartidos de bajo costo. Puedes elegir tu modalidad favorita en el selector de cada tarjeta.',
+  },
+  {
+    question: '¿Qué garantía tengo ante cualquier caída o cambio de política?',
+    answer:
+      'Cuentas con Garantía Total por los 30 días o el tiempo contratado. Si una cuenta presenta inconvenientes, se restablece o reemplaza sin ningún cobro adicional.',
+  },
+  {
+    question: '¿Puedo renovar la misma cuenta el siguiente mes?',
+    answer:
+      'Sí. En servicios como Netflix, ChatGPT, Disney+ y Spotify puedes renovar con anticipación para mantener tus perfiles, listas, historial y configuraciones intactas.',
+  },
+];
+
 export const DEFAULT_SETTINGS: StoreSettings = {
   name: 'Ali',
   suffix: 'clip',
@@ -338,7 +370,12 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   showYoutube: true,
   showTwitter: false,
   paymentMethods: DEFAULT_PAYMENT_METHODS,
-  reviewsBadgeText: '✨ +15,000 Clientes Satisfechos en Todo el Perú',
+
+  // 1. Navbar & Anuncios
+  navbarCtaText: 'WhatsApp Soporte',
+  searchPlaceholder: 'Buscar servicio (ej. ChatGPT, Netflix...)',
+
+  // 2. Banner Principal (Hero)
   heroBadgeText: 'MEMBRESÍAS DIGITALES PREMIUM • ENTREGA EN 3 MINUTOS',
   heroTitlePrefix: 'ACCESO',
   heroTitleHighlight: 'PREMIUM',
@@ -349,6 +386,86 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   heroRatingText: '+15,000 Clientes en Perú',
   heroCtaText: 'Explorar Catálogo',
   heroShowcaseTitle: '+ Vendidos en Perú (En Vivo)',
+  heroCarouselRankBadge: 'Más Vendido',
+  heroCarouselInstantBadge: 'Inmediato',
+  heroCarouselGuaranteeText: 'Garantía 100%',
+  heroCarouselActivationsText: '+2.400 Activaciones',
+  heroCarouselBaseRating: '4.9',
+  heroCarouselRatingVary: true,
+  heroCarouselFromText: 'Desde',
+  heroCarouselCtaText: 'Obtener',
+  heroCarouselHintText: 'Clic en el banner para adquirir al instante',
+
+  // 3. Cinta de Beneficios (LED Ticker)
+  tickerItems: DEFAULT_TICKER_ITEMS,
+
+  // 4. Catálogo & Filtros
+  catalogTitle: 'Catálogo de Membresías y Cuentas Premium',
+  categoryTabAll: 'Todos los Productos',
+  categoryTabAi: 'Inteligencia Artificial',
+  categoryTabStreaming: 'Streaming & Series',
+  catalogStatusText: 'servicios disponibles',
+  catalogEmptyTitle: 'No encontramos resultados para tu búsqueda',
+  catalogEmptyDesc:
+    'Intenta buscar con otro nombre como "ChatGPT", "Netflix", "Canva", o contáctanos por WhatsApp para consultar disponibilidad.',
+  catalogEmptyResetText: 'Restablecer Catálogo',
+
+  // 5. Proceso de Compra (4 Pasos)
+  processSectionBadge: 'Flujo Rápido',
+  processSectionTitle: '¿Cómo Comprar en 4 Pasos?',
+  processSectionWaLink: 'Atención guiada por WhatsApp',
+  processStep1Title: 'Elige tu Plan',
+  processStep1Desc: 'Selecciona el servicio y la modalidad (1 mes, 3 meses o perfil privado).',
+  processStep2Title: 'Realiza el Pago',
+  processStep2Desc: 'Transfiere mediante Yape, Plin, BCP o Binance Pay sin comisiones ocultas.',
+  processStep3Title: 'Envía Captura',
+  processStep3Desc: 'Comparte el comprobante al WhatsApp oficial para validación inmediata.',
+  processStep4Title: 'Recibe tu Acceso',
+  processStep4Desc: 'En menos de 3 minutos recibes tus credenciales con garantía total activa.',
+
+  // 6. Métodos de Pago
+  paymentSectionBadge: 'Pagos 100% Verificados en Perú',
+  paymentSectionTitle: 'Métodos de Pago Inmediatos',
+  paymentSectionSubtitle: 'Haz clic en tu método preferido para ver el número o cuenta oficial al instante.',
+  paymentCardBtnText: 'Ver datos →',
+
+  // 7. Opiniones & Reseñas
+  reviewsBadgeText: '✨ +15,000 Clientes Satisfechos en Todo el Perú',
+  reviewsSectionTitlePrefix: 'La Confianza de Quienes Ya Disfrutan de Sus',
+  reviewsSectionTitleHighlight: 'Cuentas VIP',
+  reviewsSectionDescription:
+    'Comprobantes de entrega real en menos de 3 minutos, cuentas privadas con PIN y calificaciones de usuarios verificados.',
+  reviewsBtnText: 'Dejar Mi Opinión',
+  reviewsStat1Title: 'Cuentas 100% Renovables',
+  reviewsStat1Sub: 'Sin perder historiales',
+  reviewsStat2Title: 'Usuario Verificado',
+  reviewsStat2Sub: 'Opiniones 100% Auténticas',
+  reviewsStat3Title: '+15,000 Clientes',
+  reviewsStat3Sub: 'En todo el Perú',
+
+  // 8. Preguntas Frecuentes (FAQ)
+  faqSectionBadge: 'Dudas Resueltas',
+  faqSectionTitle: 'Preguntas Frecuentes',
+  faqSectionDescription: 'Todo lo que necesitas saber antes de solicitar tu membresía digital.',
+  faqItems: DEFAULT_FAQ_ITEMS,
+
+  // 9. Pie de Página (Footer)
+  footerSlogan:
+    'Tu tienda digital de confianza para membresías de Inteligencia Artificial y Streaming en Perú. Entrega ágil y garantía total certificada.',
+  footerHours: 'Atención: Lunes a Domingo, 8:00 AM - 11:30 PM',
+  footerTrustNote: 'Transacciones seguras y validadas al instante',
+  footerPaymentTitle: 'Métodos de Pago',
+  footerPaymentDesc: 'Aceptamos transferencias inmediatas sin comisiones ocultas para tu comodidad:',
+  footerPaymentValidation: 'Validación de comprobante en menos de 2 minutos vía WhatsApp.',
+  footerCopyright: '© 2026 Aliclip. Todos los derechos reservados.',
+  footerSubtitle: 'Digital Store • Hecho con ❤️ Lima-Perú',
+
+  // 10. Términos y Condiciones
+  termsModalTitle: 'Términos, Condiciones y Garantía',
+  termsModalSubtitle: 'Transparencia, respaldo y políticas de uso de AliClip',
+  termsCommitmentTitle: 'Compromiso de Garantía Total AliClip',
+  termsCommitmentText:
+    'Todas las cuentas y perfiles adquiridos cuentan con garantía ininterrumpida por el periodo exacto contratado (30 días para planes mensuales o 90 días para planes trimestrales). Ante cualquier eventualidad técnica, nuestro soporte responderá de inmediato.',
 };
 
 const PRODUCTS_COLLECTION = 'products';

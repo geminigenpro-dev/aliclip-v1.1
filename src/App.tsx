@@ -426,7 +426,7 @@ export default function App() {
                 }`}
               >
                 <Grid className="w-3.5 h-3.5" />
-                <span>Todos los Productos</span>
+                <span>{settings.categoryTabAll || 'Todos los Productos'}</span>
                 <span
                   className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
                     category === 'all'
@@ -449,7 +449,7 @@ export default function App() {
                 }`}
               >
                 <Bot className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Inteligencia Artificial</span>
+                <span>{settings.categoryTabAi || 'Inteligencia Artificial'}</span>
                 <span
                   className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
                     category === 'ai'
@@ -472,7 +472,7 @@ export default function App() {
                 }`}
               >
                 <Film className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Streaming &amp; Series</span>
+                <span>{settings.categoryTabStreaming || 'Streaming & Series'}</span>
                 <span
                   className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
                     category === 'streaming'
@@ -489,7 +489,7 @@ export default function App() {
             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 px-2 py-1">
               <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
               <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300">
-                {loading ? 'Cargando membresías...' : `${filteredProducts.length} servicios disponibles`}
+                {loading ? 'Cargando membresías...' : `${filteredProducts.length} ${settings.catalogStatusText || 'servicios disponibles'}`}
               </span>
             </div>
           </div>
@@ -549,15 +549,18 @@ export default function App() {
               <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 mx-auto flex items-center justify-center mb-3">
                 <SearchX className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-slate-800 dark:text-white">No encontramos resultados para tu búsqueda</h3>
+              <h3 className="text-base font-bold text-slate-800 dark:text-white">
+                {settings.catalogEmptyTitle || 'No encontramos resultados para tu búsqueda'}
+              </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1 mb-4">
-                Intenta buscar con otro nombre como "ChatGPT", "Netflix", "Canva", o contáctanos por WhatsApp para consultar disponibilidad.
+                {settings.catalogEmptyDesc ||
+                  'Intenta buscar con otro nombre como "ChatGPT", "Netflix", "Canva", o contáctanos por WhatsApp para consultar disponibilidad.'}
               </p>
               <button
                 onClick={() => setSearchQuery('')}
                 className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow-sm cursor-pointer"
               >
-                Restablecer Catálogo
+                {settings.catalogEmptyResetText || 'Restablecer Catálogo'}
               </button>
             </div>
           )}
@@ -617,7 +620,7 @@ export default function App() {
             </div>
           }
         >
-          <FaqSection />
+          <FaqSection settings={settings} />
         </Suspense>
       </LazySection>
 
@@ -705,7 +708,12 @@ export default function App() {
           />
         )}
 
-        {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
+        {showTerms && (
+          <TermsModal
+            settings={settings}
+            onClose={() => setShowTerms(false)}
+          />
+        )}
 
         {showClaims && (
           <ClaimsModal

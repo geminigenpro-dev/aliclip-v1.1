@@ -1,11 +1,15 @@
 import React from 'react';
 import { X, ShieldCheck, CheckCircle } from 'lucide-react';
+import { StoreSettings } from '../types';
 
 interface TermsModalProps {
+  settings?: StoreSettings;
   onClose: () => void;
 }
 
-export const TermsModal: React.FC<TermsModalProps> = ({ onClose }) => {
+export const TermsModal: React.FC<TermsModalProps> = ({ settings, onClose }) => {
+  const storeBrand = `${settings?.name || 'Ali'}${settings?.suffix || 'clip'}`;
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white dark:bg-[#0f172a] rounded-2xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl border border-slate-100 dark:border-slate-800 relative max-h-[90vh] flex flex-col transition-colors">
@@ -16,8 +20,12 @@ export const TermsModal: React.FC<TermsModalProps> = ({ onClose }) => {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Términos, Condiciones y Garantía</h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Transparencia, respaldo y políticas de uso de Alixplay</p>
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                {settings?.termsModalTitle || 'Términos, Condiciones y Garantía'}
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {settings?.termsModalSubtitle || `Transparencia, respaldo y políticas de uso de ${storeBrand}`}
+              </p>
             </div>
           </div>
           <button
@@ -33,11 +41,10 @@ export const TermsModal: React.FC<TermsModalProps> = ({ onClose }) => {
           <div className="bg-indigo-50/60 dark:bg-indigo-950/40 p-3.5 rounded-xl border border-indigo-100 dark:border-indigo-900 text-indigo-900 dark:text-indigo-200">
             <strong className="block font-bold mb-1 flex items-center gap-1.5">
               <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              Compromiso de Garantía Total Alixplay
+              {settings?.termsCommitmentTitle || `Compromiso de Garantía Total ${storeBrand}`}
             </strong>
-            Todas las cuentas y perfiles adquiridos cuentan con <strong>garantía ininterrumpida</strong> por el
-            periodo exacto contratado (30 días para planes mensuales o 90 días para planes trimestrales). Ante
-            cualquier eventualidad técnica, nuestro soporte responderá de inmediato.
+            {settings?.termsCommitmentText ||
+              'Todas las cuentas y perfiles adquiridos cuentan con garantía ininterrumpida por el periodo exacto contratado (30 días para planes mensuales o 90 días para planes trimestrales). Ante cualquier eventualidad técnica, nuestro soporte responderá de inmediato.'}
           </div>
 
           <div className="space-y-1.5">

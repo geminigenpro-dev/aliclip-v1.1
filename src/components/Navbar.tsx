@@ -153,7 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Buscar servicio (ej. ChatGPT, Netflix...)"
+                  placeholder={settings.searchPlaceholder || 'Buscar servicio (ej. ChatGPT, Netflix...)'}
                   className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30 transition-all"
                 />
                 {searchQuery ? (
@@ -267,7 +267,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="min-h-[40px] px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm hover:shadow transition-all active:scale-95 shrink-0"
               >
                 <MessageCircle className="w-4 h-4" />
-                <span className="hidden xs:inline">WhatsApp</span>
+                <span className="hidden xs:inline">{settings.navbarCtaText || 'WhatsApp'}</span>
               </a>
 
               {/* Dynamic Mobile & Tablet Menu Toggle Button */}
@@ -299,7 +299,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Buscar ChatGPT, Netflix, Canva, Max..."
+                placeholder={settings.searchPlaceholder || 'Buscar ChatGPT, Netflix, Canva, Max...'}
                 className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30"
               />
               {searchQuery && (

@@ -234,8 +234,12 @@ export const CustomerReviews: React.FC<CustomerReviewsProps> = ({ settings }) =>
                 🛡️
               </div>
               <div className="text-left">
-                <span className="block text-xs font-black text-white">Garantía Total Todo el Mes</span>
-                <span className="text-[10px] text-slate-400">Tranquilidad Absoluta</span>
+                <span className="block text-xs font-black text-white">
+                  {settings.reviewsStat1Title || 'Garantía Total Todo el Mes'}
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  {settings.reviewsStat1Sub || 'Tranquilidad Absoluta'}
+                </span>
               </div>
             </div>
 
@@ -244,8 +248,12 @@ export const CustomerReviews: React.FC<CustomerReviewsProps> = ({ settings }) =>
                 🔄
               </div>
               <div className="text-left">
-                <span className="block text-xs font-black text-white">Cuentas 100% Renovables</span>
-                <span className="text-[10px] text-slate-400">Sin perder historiales</span>
+                <span className="block text-xs font-black text-white">
+                  {settings.reviewsStat2Title || 'Cuentas 100% Renovables'}
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  {settings.reviewsStat2Sub || 'Sin perder historiales'}
+                </span>
               </div>
             </div>
 
@@ -254,8 +262,12 @@ export const CustomerReviews: React.FC<CustomerReviewsProps> = ({ settings }) =>
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
               </div>
               <div className="text-left">
-                <span className="block text-xs font-black text-white">Usuario Verificado</span>
-                <span className="text-[10px] text-slate-400">Opiniones 100% Auténticas</span>
+                <span className="block text-xs font-black text-white">
+                  {settings.reviewsStat3Title || 'Usuario Verificado'}
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  {settings.reviewsStat3Sub || 'Opiniones 100% Auténticas'}
+                </span>
               </div>
             </div>
           </div>
@@ -270,19 +282,20 @@ export const CustomerReviews: React.FC<CustomerReviewsProps> = ({ settings }) =>
             </div>
 
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white flex flex-wrap items-center justify-center md:justify-start gap-2">
-              <span>La Confianza de Quienes Ya Disfrutan de Sus</span>
+              <span>{settings.reviewsSectionTitlePrefix || 'La Confianza de Quienes Ya Disfrutan de Sus'}</span>
               <span
                 className="brand-gradient-text bg-clip-text text-transparent inline-block"
                 style={{
                   backgroundImage: `linear-gradient(135deg, ${settings.colorPrimary || '#ec4899'} 0%, ${settings.colorAccent || '#8b5cf6'} 100%)`,
                 }}
               >
-                Cuentas VIP
+                {settings.reviewsSectionTitleHighlight || 'Cuentas VIP'}
               </span>
             </h2>
 
             <p className="text-xs sm:text-sm text-slate-400 max-w-2xl">
-              Comprobantes de entrega real en menos de 3 minutos, cuentas privadas con PIN y calificaciones de usuarios verificados.
+              {settings.reviewsSectionDescription ||
+                'Comprobantes de entrega real en menos de 3 minutos, cuentas privadas con PIN y calificaciones de usuarios verificados.'}
             </p>
           </div>
 
@@ -295,7 +308,7 @@ export const CustomerReviews: React.FC<CustomerReviewsProps> = ({ settings }) =>
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:shadow-[0_0_30px_rgba(16,185,129,0.6)] transition-all cursor-pointer active:scale-95"
             >
               <ShieldCheck className="w-4 h-4 text-emerald-100" />
-              <span>Dejar Mi Opinión</span>
+              <span>{settings.reviewsBtnText || 'Dejar Mi Opinión'}</span>
               <span className="px-1.5 py-0.2 rounded-md bg-white/20 text-[10px] font-bold">
                 Usuario Verificado
               </span>

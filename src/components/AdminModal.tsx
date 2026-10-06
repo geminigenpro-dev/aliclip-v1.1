@@ -40,6 +40,7 @@ import {
   CheckCircle2,
   Image as ImageIcon,
   History,
+  FileText,
 } from 'lucide-react';
 import { Product, StoreSettings, Claim, PaymentMethod, SaleRecord } from '../types';
 import {
@@ -62,6 +63,7 @@ import {
 import { generateProductDescription } from '../services/aiService';
 import { AdminSalesTab } from './admin/AdminSalesTab';
 import { AdminSalesHistoryTab } from './admin/AdminSalesHistoryTab';
+import { AdminTextsTab } from './admin/AdminTextsTab';
 
 interface AdminModalProps {
   products: Product[];
@@ -84,7 +86,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onLogout,
   onToast,
 }) => {
-  const [activeTab, setActiveTab] = useState<'products' | 'sales_history' | 'sales' | 'brand' | 'payments' | 'cloud' | 'claims' | 'security'>('sales_history');
+  const [activeTab, setActiveTab] = useState<'products' | 'sales_history' | 'sales' | 'brand' | 'texts' | 'payments' | 'cloud' | 'claims' | 'security'>('sales_history');
 
   // Product Form state
   const [showProductForm, setShowProductForm] = useState(false);
@@ -105,6 +107,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [prodP1Price, setProdP1Price] = useState('S/ 29.90');
   const [prodP2Name, setProdP2Name] = useState('');
   const [prodP2Price, setProdP2Price] = useState('');
+  const [prodRating, setProdRating] = useState('');
+  const [prodActivationsCount, setProdActivationsCount] = useState('');
   const [savingProduct, setSavingProduct] = useState(false);
   const [generatingAiDesc, setGeneratingAiDesc] = useState(false);
 
@@ -426,6 +430,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setProdP1Price('S/ 29.90');
     setProdP2Name('');
     setProdP2Price('');
+    setProdRating('');
+    setProdActivationsCount('');
     setShowProductForm(true);
   };
 
@@ -446,6 +452,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setProdP1Price(p.plans[0]?.price || 'S/ 29.90');
     setProdP2Name(p.plans[1]?.name || '');
     setProdP2Price(p.plans[1]?.price || '');
+    setProdRating(p.rating ? String(p.rating) : '');
+    setProdActivationsCount(p.activationsCount ? String(p.activationsCount) : '');
     setShowProductForm(true);
   };
 
@@ -617,6 +625,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       durationText,
       available: prodAvailable,
       stock: Math.max(0, Number(prodStock) || 0),
+      rating: prodRating.trim() || undefined,
+      activationsCount: prodActivationsCount.trim() || undefined,
       plans,
       icon: prodCategory === 'ai' ? 'sparkles' : 'film',
     };
@@ -721,7 +731,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   interface AdminNavItem {
-    id: 'products' | 'sales_history' | 'sales' | 'brand' | 'payments' | 'cloud' | 'claims' | 'security';
+    id: 'products' | 'sales_history' | 'sales' | 'brand' | 'texts' | 'payments' | 'cloud' | 'claims' | 'security';
     label: string;
     shortLabel: string;
     subtitle: string;
@@ -788,6 +798,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           icon: Palette,
           badge: 'Editor',
           badgeColor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300',
+        },
+        {
+          id: 'texts',
+          label: 'Textos & Contenido Web',
+          shortLabel: 'Textos Web',
+          subtitle: 'Títulos, pasos, FAQ y footer',
+          icon: FileText,
+          badge: 'Editable',
+          badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300',
         },
         {
           id: 'claims',
@@ -1469,6 +1488,34 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Rating y Activaciones personalizadas del Producto */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-2 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-0.5">
+                        Rating Individual (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={prodRating}
+                        onChange={(e) => setProdRating(e.target.value)}
+                        placeholder="Ej: 5.0 o 4.9 (dejar vacío para dinámico)"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold text-amber-600 dark:text-amber-400 bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-0.5">
+                        Activaciones Individuales (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={prodActivationsCount}
+                        onChange={(e) => setProdActivationsCount(e.target.value)}
+                        placeholder="Ej: +3.200 o +1.500 Activaciones"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold text-purple-600 dark:text-purple-400 bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                  </div>
+
                   <div className="flex justify-end gap-2 pt-1">
                     <button
                       type="button"
@@ -1618,6 +1665,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               sales={sales || []}
               onToast={onToast}
               onNavigateToHistory={() => setActiveTab('sales_history')}
+            />
+          </div>
+        )}
+
+        {/* Tab: Textos & Contenido Web Editable */}
+        {activeTab === 'texts' && (
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <AdminTextsTab
+              settings={brandSettings}
+              onUpdateSettings={(newSettings) => setBrandSettings(newSettings)}
+              onToast={onToast}
             />
           </div>
         )}
@@ -2517,9 +2575,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-950/60 dark:text-pink-300 border border-pink-200 dark:border-pink-800">
-                  Visible en Portada
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('texts')}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <FileText className="w-3 h-3" />
+                    <span>Ver todos los textos web →</span>
+                  </button>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-950/60 dark:text-pink-300 border border-pink-200 dark:border-pink-800">
+                    Visible en Portada
+                  </span>
+                </div>
               </div>
 
               {/* Mini Live Preview of the Hero Header */}
@@ -2707,6 +2775,81 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       placeholder="+ Vendidos en Perú (En Vivo)"
                       className="w-full px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
                     />
+                  </div>
+                </div>
+
+                {/* Configuración rápida de Carrusel / Activaciones y Rating */}
+                <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-purple-900 dark:text-purple-300">
+                      <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+                      <span>Textos del Carrusel (+ Vendidos &amp; Activaciones)</span>
+                    </div>
+                    <span className="text-[9.5px] font-bold text-purple-600 dark:text-purple-400">
+                      Carrusel Superior
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[9.5px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-0.5">
+                        Texto de Activaciones
+                      </label>
+                      <input
+                        type="text"
+                        value={brandSettings.heroCarouselActivationsText ?? '+2.400 Activaciones'}
+                        onChange={(e) =>
+                          setBrandSettings({ ...brandSettings, heroCarouselActivationsText: e.target.value })
+                        }
+                        placeholder="+2.400 Activaciones"
+                        className="w-full px-2 py-1 text-xs font-black rounded-lg border border-purple-300 dark:border-purple-800 bg-white dark:bg-slate-900 text-purple-700 dark:text-purple-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9.5px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-0.5">
+                        Rating Base
+                      </label>
+                      <input
+                        type="text"
+                        value={brandSettings.heroCarouselBaseRating ?? '4.9'}
+                        onChange={(e) =>
+                          setBrandSettings({ ...brandSettings, heroCarouselBaseRating: e.target.value })
+                        }
+                        placeholder="4.9"
+                        className="w-full px-2 py-1 text-xs font-black rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9.5px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-0.5">
+                        Distintivo de Rango
+                      </label>
+                      <input
+                        type="text"
+                        value={brandSettings.heroCarouselRankBadge ?? 'Más Vendido'}
+                        onChange={(e) =>
+                          setBrandSettings({ ...brandSettings, heroCarouselRankBadge: e.target.value })
+                        }
+                        placeholder="Más Vendido"
+                        className="w-full px-2 py-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-1.5 border-t border-purple-200 dark:border-purple-900/40 flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer text-[10.5px] font-bold text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={brandSettings.heroCarouselRatingVary !== false}
+                        onChange={(e) =>
+                          setBrandSettings({ ...brandSettings, heroCarouselRatingVary: e.target.checked })
+                        }
+                        className="w-3.5 h-3.5 text-purple-600 rounded"
+                      />
+                      <span>Variar rating entre productos del carrusel (4.8, 4.9, 5.0...)</span>
+                    </label>
+                    <span className="text-[9.5px] text-purple-500 font-bold">
+                      {brandSettings.heroCarouselRatingVary !== false ? 'Dinámico' : 'Estático'}
+                    </span>
                   </div>
                 </div>
               </div>

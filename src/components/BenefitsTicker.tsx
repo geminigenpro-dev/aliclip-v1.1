@@ -15,56 +15,37 @@ interface BenefitsTickerProps {
 }
 
 export const BenefitsTicker: React.FC<BenefitsTickerProps> = ({ settings }) => {
-  const items = [
-    {
-      icon: Zap,
-      text: 'ENTREGA EN 3 MINUTOS',
-      sub: 'ACTIVACIÓN INMEDIATA',
-      color: 'text-amber-400',
-      badgeColor: 'border-amber-400/40 text-amber-300 bg-amber-500/10',
-      glow: 'shadow-[0_0_12px_rgba(251,191,36,0.5)]',
-    },
-    {
-      icon: ShieldCheck,
-      text: 'GARANTÍA 100% ACTIVA',
-      sub: 'REPOSICIÓN INMEDIATA',
-      color: 'text-cyan-400',
-      badgeColor: 'border-cyan-400/40 text-cyan-300 bg-cyan-500/10',
-      glow: 'shadow-[0_0_12px_rgba(34,211,238,0.5)]',
-    },
-    {
-      icon: Lock,
-      text: 'PERFILES 100% PRIVADOS',
-      sub: 'CON PIN PERSONAL',
-      color: 'text-emerald-400',
-      badgeColor: 'border-emerald-400/40 text-emerald-300 bg-emerald-500/10',
-      glow: 'shadow-[0_0_12px_rgba(52,211,153,0.5)]',
-    },
-    {
-      icon: CreditCard,
-      text: 'PAGOS YAPE, PLIN & BCP',
-      sub: 'CERO COMISIONES',
-      color: 'text-purple-400',
-      badgeColor: 'border-purple-400/40 text-purple-300 bg-purple-500/10',
-      glow: 'shadow-[0_0_12px_rgba(192,132,252,0.5)]',
-    },
-    {
-      icon: RefreshCw,
-      text: 'CUENTAS RENOVABLES',
-      sub: 'SIN PERDER HISTORIAL',
-      color: 'text-pink-400',
-      badgeColor: 'border-pink-400/40 text-pink-300 bg-pink-500/10',
-      glow: 'shadow-[0_0_12px_rgba(244,114,182,0.5)]',
-    },
-    {
-      icon: MessageCircle,
-      text: 'SOPORTE WHATSAPP 24/7',
-      sub: 'ATENCIÓN DEDICADA',
-      color: 'text-emerald-400',
-      badgeColor: 'border-emerald-400/40 text-emerald-300 bg-emerald-500/10',
-      glow: 'shadow-[0_0_12px_rgba(16,185,129,0.5)]',
-    },
+  const baseIcons = [Zap, ShieldCheck, Lock, CreditCard, RefreshCw, MessageCircle, Sparkles];
+  const baseColors = [
+    { color: 'text-amber-400', badgeColor: 'border-amber-400/40 text-amber-300 bg-amber-500/10', glow: 'shadow-[0_0_12px_rgba(251,191,36,0.5)]' },
+    { color: 'text-cyan-400', badgeColor: 'border-cyan-400/40 text-cyan-300 bg-cyan-500/10', glow: 'shadow-[0_0_12px_rgba(34,211,238,0.5)]' },
+    { color: 'text-emerald-400', badgeColor: 'border-emerald-400/40 text-emerald-300 bg-emerald-500/10', glow: 'shadow-[0_0_12px_rgba(52,211,153,0.5)]' },
+    { color: 'text-purple-400', badgeColor: 'border-purple-400/40 text-purple-300 bg-purple-500/10', glow: 'shadow-[0_0_12px_rgba(192,132,252,0.5)]' },
+    { color: 'text-pink-400', badgeColor: 'border-pink-400/40 text-pink-300 bg-pink-500/10', glow: 'shadow-[0_0_12px_rgba(244,114,182,0.5)]' },
+    { color: 'text-emerald-400', badgeColor: 'border-emerald-400/40 text-emerald-300 bg-emerald-500/10', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.5)]' },
   ];
+
+  const rawItems = settings.tickerItems && settings.tickerItems.length > 0 ? settings.tickerItems : [
+    { text: 'ENTREGA EN 3 MINUTOS', sub: 'ACTIVACIÓN INMEDIATA' },
+    { text: 'GARANTÍA 100% ACTIVA', sub: 'REPOSICIÓN INMEDIATA' },
+    { text: 'PERFILES 100% PRIVADOS', sub: 'CON PIN PERSONAL' },
+    { text: 'PAGOS YAPE, PLIN & BCP', sub: 'CERO COMISIONES' },
+    { text: 'CUENTAS RENOVABLES', sub: 'SIN PERDER HISTORIAL' },
+    { text: 'SOPORTE WHATSAPP 24/7', sub: 'ATENCIÓN DEDICADA' },
+  ];
+
+  const items = rawItems.map((item, idx) => {
+    const style = baseColors[idx % baseColors.length];
+    const Icon = baseIcons[idx % baseIcons.length];
+    return {
+      icon: Icon,
+      text: item.text,
+      sub: item.sub,
+      color: style.color,
+      badgeColor: style.badgeColor,
+      glow: style.glow,
+    };
+  });
 
   // Repeat items for seamless, non-stop LED looping marquee
   const loopedItems = [...items, ...items];

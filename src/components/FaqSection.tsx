@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { StoreSettings, FaqItemSetting } from '../types';
 
-interface FaqItem {
-  question: string;
-  answer: string;
+interface FaqSectionProps {
+  settings?: StoreSettings;
 }
 
-const FAQ_ITEMS: FaqItem[] = [
+const DEFAULT_FAQ_LIST: FaqItemSetting[] = [
   {
     question: '¿En cuánto tiempo entregan la cuenta tras realizar el pago?',
     answer:
@@ -29,28 +29,32 @@ const FAQ_ITEMS: FaqItem[] = [
   },
 ];
 
-export const FaqSection: React.FC = () => {
+export const FaqSection: React.FC<FaqSectionProps> = ({ settings }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggle = (idx: number) => {
     setOpenIndex(openIndex === idx ? null : idx);
   };
 
+  const faqList = settings?.faqItems && settings.faqItems.length > 0 ? settings.faqItems : DEFAULT_FAQ_LIST;
+
   return (
     <section id="faq" className="py-8 bg-slate-50 dark:bg-[#0b0f19] border-b border-slate-200/80 dark:border-slate-800 transition-colors duration-200">
       <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 space-y-4">
         <div className="text-center space-y-1">
           <span className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
-            Dudas Resueltas
+            {settings?.faqSectionBadge || 'Dudas Resueltas'}
           </span>
-          <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">Preguntas Frecuentes</h2>
+          <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+            {settings?.faqSectionTitle || 'Preguntas Frecuentes'}
+          </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Todo lo que necesitas saber antes de solicitar tu membresía digital.
+            {settings?.faqSectionDescription || 'Todo lo que necesitas saber antes de solicitar tu membresía digital.'}
           </p>
         </div>
 
         <div className="space-y-2">
-          {FAQ_ITEMS.map((item, idx) => {
+          {faqList.map((item, idx) => {
             const isOpen = openIndex === idx;
             return (
               <div

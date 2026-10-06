@@ -56,11 +56,13 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
         <div className="text-center max-w-xl mx-auto mb-5 space-y-1">
           <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
             <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-            Pagos 100% Verificados en Perú
+            {settings?.paymentSectionBadge || 'Pagos 100% Verificados en Perú'}
           </span>
-          <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">Métodos de Pago Inmediatos</h2>
+          <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+            {settings?.paymentSectionTitle || 'Métodos de Pago Inmediatos'}
+          </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Haz clic en tu método preferido para ver el número o cuenta oficial al instante.
+            {settings?.paymentSectionSubtitle || 'Haz clic en tu método preferido para ver el número o cuenta oficial al instante.'}
           </p>
         </div>
 
@@ -112,7 +114,7 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                   color: method.color,
                 }}
               >
-                Ver datos →
+                {settings?.paymentCardBtnText || 'Ver datos →'}
               </span>
             </button>
           ))}
