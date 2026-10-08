@@ -3,6 +3,8 @@ import {
   Grid,
   Bot,
   Film,
+  GraduationCap,
+  Layers,
   SearchX,
   MessageCircle,
 } from 'lucide-react';
@@ -71,7 +73,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   // Filter & Search
-  const [category, setCategory] = useState<'all' | 'ai' | 'streaming'>('all');
+  const [category, setCategory] = useState<'all' | 'ai' | 'streaming' | 'courses' | 'resources'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals
@@ -136,6 +138,25 @@ export default function App() {
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Hash route listener for #cursos and #recursos
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#cursos') {
+        setCategory('courses');
+      } else if (hash === '#recursos') {
+        setCategory('resources');
+      } else if (hash === '#streaming') {
+        setCategory('streaming');
+      } else if (hash === '#ia') {
+        setCategory('ai');
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
   const handleToggleTheme = () => {
@@ -336,6 +357,8 @@ export default function App() {
   const totalAll = products.length;
   const totalAi = products.filter((p) => p.category === 'ai').length;
   const totalStreaming = products.filter((p) => p.category === 'streaming').length;
+  const totalCourses = products.filter((p) => p.category === 'courses').length;
+  const totalResources = products.filter((p) => p.category === 'resources').length;
 
   const handleDirectBuyFromCard = (product: Product, plan: ProductPlan) => {
     setSelectedProduct(product);
@@ -395,6 +418,11 @@ export default function App() {
         onBrandClick={handleBrandTripleClick}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        onSelectCategory={(cat) => {
+          setCategory(cat);
+          const el = document.getElementById('catalogo');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }}
       />
 
       {/* Top Main Hero Banner with Integrated + Vendidos Translucent Loop Slider */}
@@ -484,6 +512,52 @@ export default function App() {
                   {totalStreaming}
                 </span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setCategory('courses')}
+                aria-label="Filtrar por Cursos"
+                className={`min-h-[42px] px-3.5 py-2 rounded-xl font-black transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+                  category === 'courses'
+                    ? 'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)]'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
+                <span>{settings.categoryTabCourses || 'Cursos & Masterclasses'}</span>
+                <span
+                  className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
+                    category === 'courses'
+                      ? 'bg-white/25 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  {totalCourses}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCategory('resources')}
+                aria-label="Filtrar por Recursos"
+                className={`min-h-[42px] px-3.5 py-2 rounded-xl font-black transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+                  category === 'resources'
+                    ? 'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)]'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{settings.categoryTabResources || 'Recursos & Packs'}</span>
+                <span
+                  className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
+                    category === 'resources'
+                      ? 'bg-white/25 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  {totalResources}
+                </span>
+              </button>
             </div>
 
             {/* Right Side Status Indicator */}
@@ -505,6 +579,90 @@ export default function App() {
               >
                 Ver todo el catálogo
               </button>
+            </div>
+          )}
+
+          {/* Anchor targets for direct deep-linking */}
+          <div id="cursos" className="scroll-mt-24" />
+          <div id="recursos" className="scroll-mt-24" />
+
+          {/* Cursos Spotlight Section Header Banner */}
+          {category === 'courses' && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-indigo-500/10 border border-amber-500/30 dark:border-amber-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-200">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shrink-0 shadow-md">
+                  <GraduationCap className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Academia & Cursos Digitales
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                      Acceso Vitalicio 24/7
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">
+                      Material en Google Drive
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                    {settings.categoryTabCourses || 'Cursos & Masterclasses Especializadas'}
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 max-w-2xl">
+                    Formaciones completas en Inteligencia Artificial, Marketing y Edición Viral. Incluyen clases grabadas en alta resolución, proyectos editables y asesoría por WhatsApp.
+                  </p>
+                </div>
+              </div>
+              <div className="shrink-0 flex items-center gap-2 self-end md:self-auto">
+                <button
+                  type="button"
+                  onClick={() => openWhatsAppLink(`¡Hola ${settings.name}${settings.suffix}! 👋 Deseo consultar por el catálogo completo de cursos y masterclasses disponibles.`)}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Consultar Cursos</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Recursos Spotlight Section Header Banner */}
+          {category === 'resources' && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 dark:border-emerald-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-200">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                  <Layers className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      Bóveda de Recursos & Packs Digitales
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">
+                      Descarga Inmediata
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-800 dark:text-indigo-300">
+                      +100GB en Google Drive
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                    {settings.categoryTabResources || 'Recursos & Mega Packs Descargables'}
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 max-w-2xl">
+                    Mega packs de plantillas Canva editables, bóvedas de prompts para ChatGPT/Midjourney, overlays 4K y LUTs cinematográficos con enlaces permanentes y entrega automática.
+                  </p>
+                </div>
+              </div>
+              <div className="shrink-0 flex items-center gap-2 self-end md:self-auto">
+                <button
+                  type="button"
+                  onClick={() => openWhatsAppLink(`¡Hola ${settings.name}${settings.suffix}! 👋 Deseo consultar por los packs de recursos y plantillas descargables.`)}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Pedir Enlace Drive</span>
+                </button>
+              </div>
             </div>
           )}
 

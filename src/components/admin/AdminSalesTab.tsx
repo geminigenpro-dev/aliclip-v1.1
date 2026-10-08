@@ -115,7 +115,7 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
         {
           clientName: clientName.trim(),
           clientPhone: clientPhone.trim(),
-          clientEmail: clientEmail.trim() || undefined,
+          clientEmail: clientEmail.trim() || '',
           productId: selectedProduct?.id || 'prod_custom',
           productName: selectedProduct?.name || 'Servicio Digital',
           planName: planName.trim(),
@@ -126,7 +126,7 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
           activationDate,
           expirationDate,
           status: 'activa',
-          notes: notes.trim() || undefined,
+          notes: notes.trim() || '',
         },
         autoDiscountStock
       );

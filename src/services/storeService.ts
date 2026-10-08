@@ -304,6 +304,105 @@ export const INITIAL_PRODUCTS: Product[] = [
     plans: [
       { name: '1 Perfil PIN (1 Mes)', price: 'S/ 6.50', desc: 'Perfil privado garantizado' }
     ]
+  },
+  // --- CURSOS DIGITALES & FORMACIÓN ---
+  {
+    id: 'prod_curso_ia',
+    name: 'Masterclass IA & Prompt Engineering',
+    category: 'courses',
+    tag: 'Certificación • Acceso Vitalicio',
+    desc: 'Domina ChatGPT-4o, Claude 3.5, Midjourney y automatizaciones para duplicar tu productividad y ventas.',
+    imageUrl: '',
+    icon: 'graduation-cap',
+    available: true,
+    order: 17,
+    rating: '5.0',
+    activationsCount: '+1.450 Alumnos',
+    plans: [
+      { name: 'Acceso Completo + Drive', price: 'S/ 29.00', desc: 'Acceso de por vida a grabaciones y recursos' },
+      { name: 'VIP + Asesoría WhatsApp', price: 'S/ 49.00', desc: 'Plantillas exclusivas y grupo privado' }
+    ]
+  },
+  {
+    id: 'prod_curso_marketing',
+    name: 'Curso Tráfico Pago: Meta & TikTok Ads',
+    category: 'courses',
+    tag: 'E-commerce & Servicios',
+    desc: 'Estrategias probadas paso a paso para crear campañas rentables con alto retorno de inversión (ROAS).',
+    imageUrl: '',
+    icon: 'trending-up',
+    available: true,
+    order: 18,
+    rating: '4.9',
+    activationsCount: '+980 Alumnos',
+    plans: [
+      { name: 'Acceso Vitalicio', price: 'S/ 35.00', desc: 'Módulos actualizados 2026' }
+    ]
+  },
+  {
+    id: 'prod_curso_edicion',
+    name: 'Master en Edición Viral: CapCut & Premiere',
+    category: 'courses',
+    tag: 'Creadores de Contenido',
+    desc: 'Aprende storytelling, efectos virales de retención, sound design y color grading para Reels y TikTok.',
+    imageUrl: '',
+    icon: 'clapperboard',
+    available: true,
+    order: 19,
+    rating: '5.0',
+    activationsCount: '+1.220 Alumnos',
+    plans: [
+      { name: 'Pack Formación Pro', price: 'S/ 25.00', desc: 'Clases 4K + Proyectos editables' }
+    ]
+  },
+  // --- RECURSOS & PACKS DIGITALES ---
+  {
+    id: 'prod_rec_megapack_diseno',
+    name: 'Mega Pack +50,000 Plantillas Canva Pro',
+    category: 'resources',
+    tag: 'Descarga Inmediata • Google Drive',
+    desc: 'Plantillas 100% editables para redes sociales, carruseles, flyers, restaurantes, bienes raíces y marcas.',
+    imageUrl: '',
+    icon: 'layers',
+    available: true,
+    order: 20,
+    rating: '5.0',
+    activationsCount: '+3.100 Descargas',
+    plans: [
+      { name: 'Acceso Permanente Drive', price: 'S/ 19.90', desc: 'Actualizaciones mensuales automáticas' }
+    ]
+  },
+  {
+    id: 'prod_rec_prompts_ia',
+    name: 'Bóveda de +2,500 Prompts Secretos IA',
+    category: 'resources',
+    tag: 'Copywriting & Negocios',
+    desc: 'Prompts optimizados para ventas, creación de contenido, embudos, SEO, programación y marketing.',
+    imageUrl: '',
+    icon: 'sparkles',
+    available: true,
+    order: 21,
+    rating: '4.95',
+    activationsCount: '+2.450 Descargas',
+    plans: [
+      { name: 'Bóveda Notion + PDF', price: 'S/ 15.00', desc: 'Compatible con ChatGPT, Claude y Gemini' }
+    ]
+  },
+  {
+    id: 'prod_rec_overlays_luts',
+    name: 'Super Pack Overlays, LUTs & Sound FX 4K',
+    category: 'resources',
+    tag: 'Para Premiere, DaVinci & CapCut',
+    desc: 'Más de 100GB de transiciones cinematográficas, texturas de papel, efectos de sonido y gradaciones de color.',
+    imageUrl: '',
+    icon: 'palette',
+    available: true,
+    order: 22,
+    rating: '5.0',
+    activationsCount: '+1.800 Descargas',
+    plans: [
+      { name: 'Descarga Directa Google Drive', price: 'S/ 22.00', desc: 'Enlace de alta velocidad sin límites' }
+    ]
   }
 ];
 
@@ -405,6 +504,8 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   categoryTabAll: 'Todos los Productos',
   categoryTabAi: 'Inteligencia Artificial',
   categoryTabStreaming: 'Streaming & Series',
+  categoryTabCourses: 'Cursos & Masterclasses',
+  categoryTabResources: 'Recursos & Packs Digitales',
   catalogStatusText: 'servicios disponibles',
   catalogEmptyTitle: 'No encontramos resultados para tu búsqueda',
   catalogEmptyDesc:
@@ -489,6 +590,7 @@ export function subscribeToProducts(
       snapshot.forEach((d) => {
         const data = d.data();
         items.push({
+          ...data,
           id: d.id,
           name: data.name || '',
           category: data.category || 'ai',
@@ -503,7 +605,7 @@ export function subscribeToProducts(
             { name: '1 Mes', price: 'S/ 25.00', desc: 'Plan Estándar' }
           ],
           updatedAt: data.updatedAt,
-        });
+        } as Product);
       });
       // Sort by order or name
       items.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
@@ -638,6 +740,61 @@ export async function seedProductsCollection(force = false): Promise<{ count: nu
 }
 
 /**
+ * Seeds only products of a specific category ('courses' or 'resources') without overwriting existing memberships
+ */
+export async function seedCategoryProducts(targetCategory: 'courses' | 'resources'): Promise<{ count: number; message: string }> {
+  const items = INITIAL_PRODUCTS.filter((p) => p.category === targetCategory);
+  if (items.length === 0) {
+    return { count: 0, message: 'No hay productos de plantilla para esta categoría.' };
+  }
+
+  try {
+    const batch = writeBatch(db);
+    items.forEach((prod, index) => {
+      const docRef = doc(db, PRODUCTS_COLLECTION, prod.id);
+      batch.set(docRef, {
+        ...prod,
+        order: (targetCategory === 'courses' ? 17 : 20) + index,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    });
+
+    await batch.commit();
+    const label = targetCategory === 'courses' ? 'cursos digitales' : 'recursos descargables';
+    return {
+      count: items.length,
+      message: `¡Se cargaron ${items.length} ${label} de ejemplo en Firestore con éxito!`,
+    };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, PRODUCTS_COLLECTION);
+    throw error;
+  }
+}
+
+/**
+ * Recursively removes all undefined fields from an object so Firestore operations never fail.
+ */
+export function removeUndefinedFields<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => removeUndefinedFields(item)) as unknown as T;
+  }
+
+  const cleanObj: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleanObj[key] = typeof value === 'object' && value !== null
+        ? removeUndefinedFields(value)
+        : value;
+    }
+  }
+  return cleanObj as T;
+}
+
+/**
  * Creates or updates a single product in Firestore
  * Automatically resizes and compresses oversized base64 images to guarantee it never exceeds
  * Firestore's 1,048,487 bytes limit.
@@ -665,12 +822,12 @@ export async function saveProductToFirestore(product: Product): Promise<void> {
     }
   }
 
-  const payload = {
+  const payload = removeUndefinedFields({
     ...product,
     imageUrl: safeImageUrl,
     id,
     updatedAt: new Date().toISOString(),
-  };
+  });
 
   try {
     await setDoc(docRef, payload, { merge: true });
@@ -740,10 +897,10 @@ export async function saveSettingsToFirestore(settings: Partial<StoreSettings>):
   try {
     await setDoc(
       docRef,
-      {
+      removeUndefinedFields({
         ...settings,
         updatedAt: new Date().toISOString(),
-      },
+      }),
       { merge: true }
     );
   } catch (error) {
@@ -764,12 +921,12 @@ export async function savePaymentMethodsToFirestore(methods: PaymentMethod[]): P
 export async function submitClaimToFirestore(claim: Omit<Claim, 'id' | 'createdAt' | 'status'>): Promise<string> {
   const id = `claim_${Date.now()}`;
   const docRef = doc(db, CLAIMS_COLLECTION, id);
-  const fullClaim: Claim = {
+  const fullClaim: Claim = removeUndefinedFields({
     ...claim,
     id,
     createdAt: new Date().toISOString(),
     status: 'pending',
-  };
+  });
 
   try {
     await setDoc(docRef, fullClaim);
@@ -1008,11 +1165,11 @@ export async function createSaleRecord(
 ): Promise<SaleRecord> {
   const id = `sale_${Date.now()}`;
   const docRef = doc(db, SALES_COLLECTION, id);
-  const fullSale: SaleRecord = {
+  const fullSale: SaleRecord = removeUndefinedFields({
     ...saleData,
     id,
     createdAt: new Date().toISOString(),
-  };
+  });
 
   try {
     await setDoc(docRef, fullSale);

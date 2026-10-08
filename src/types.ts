@@ -7,7 +7,7 @@ export interface ProductPlan {
 export interface Product {
   id: string;
   name: string;
-  category: 'ai' | 'streaming' | 'utility';
+  category: 'ai' | 'streaming' | 'courses' | 'resources' | 'utility';
   tag: string;
   desc: string;
   imageUrl?: string;
@@ -27,6 +27,20 @@ export interface Product {
   rating?: string | number; // Rating individual del producto (ej: 4.9, 5.0)
   activationsCount?: string | number; // Activaciones del producto (ej: +2.400)
   updatedAt?: string;
+
+  // Campos exclusivos para Cursos & Formación
+  courseInstructor?: string; // Instructor o Especialista (ej: Certificado AlixPlay Pro)
+  courseLevel?: string; // Nivel de formación (ej: Básico a Avanzado, Masterclass)
+  courseModules?: string; // Módulos y duración (ej: 12 Módulos • 28 Horas 4K)
+  courseAccessUrl?: string; // Enlace privado de acceso o Google Drive
+  courseCertification?: boolean; // Certificado de finalización
+
+  // Campos exclusivos para Recursos & Packs Digitales
+  resourceFormat?: string; // Formato de entrega (ej: Google Drive VIP, Notion Bóveda)
+  resourceSoftware?: string; // Software compatible (ej: Canva Free/Pro, Premiere, CapCut)
+  resourceSize?: string; // Peso / Elementos (ej: +50,000 Plantillas, 45 GB)
+  resourceLicense?: string; // Tipo de licencia (ej: Licencia Comercial Libre)
+  resourceDownloadUrl?: string; // Enlace directo a Google Drive / Descarga
 }
 
 export interface SaleRecord {
@@ -140,6 +154,8 @@ export interface StoreSettings {
   categoryTabAll?: string;
   categoryTabAi?: string;
   categoryTabStreaming?: string;
+  categoryTabCourses?: string;
+  categoryTabResources?: string;
   catalogStatusText?: string;
   catalogEmptyTitle?: string;
   catalogEmptyDesc?: string;

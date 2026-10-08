@@ -725,6 +725,30 @@ export const AdminTextsTab: React.FC<AdminTextsTabProps> = ({
                     className="w-full px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                    Pestaña "Cursos"
+                  </label>
+                  <input
+                    type="text"
+                    value={localSettings.categoryTabCourses ?? 'Cursos & Masterclasses'}
+                    onChange={(e) => setLocalSettings({ ...localSettings, categoryTabCourses: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                    Pestaña "Recursos"
+                  </label>
+                  <input
+                    type="text"
+                    value={localSettings.categoryTabResources ?? 'Recursos & Packs Digitales'}
+                    onChange={(e) => setLocalSettings({ ...localSettings, categoryTabResources: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                  />
+                </div>
               </div>
 
               <div>

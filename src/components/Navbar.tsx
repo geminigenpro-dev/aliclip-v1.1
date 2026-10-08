@@ -14,6 +14,8 @@ import {
   CreditCard,
   HelpCircle,
   Menu,
+  GraduationCap,
+  Layers,
 } from 'lucide-react';
 import { StoreSettings } from '../types';
 
@@ -29,6 +31,7 @@ interface NavbarProps {
   onBrandClick: () => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
+  onSelectCategory?: (category: 'all' | 'ai' | 'streaming' | 'courses' | 'resources') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -43,6 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onBrandClick,
   theme = 'light',
   onToggleTheme,
+  onSelectCategory,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDark = theme === 'dark';
@@ -183,10 +187,39 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <a
                 href="#catalogo"
+                onClick={() => onSelectCategory?.('all')}
                 className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
               >
                 <Grid className="w-3.5 h-3.5 text-indigo-500" />
                 <span>Catálogo</span>
+              </a>
+
+              <a
+                href="#cursos"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onSelectCategory?.('courses');
+                  const el = document.getElementById('cursos') || document.getElementById('catalogo');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+              >
+                <GraduationCap className="w-3.5 h-3.5 text-amber-500" />
+                <span>Cursos</span>
+              </a>
+
+              <a
+                href="#recursos"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onSelectCategory?.('resources');
+                  const el = document.getElementById('recursos') || document.getElementById('catalogo');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+              >
+                <Layers className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Recursos</span>
               </a>
 
               <a
@@ -344,7 +377,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <a
                   href="#catalogo"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onSelectCategory?.('all');
+                  }}
                   className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 hover:bg-indigo-50/80 dark:hover:bg-indigo-950/40 hover:border-indigo-200 dark:hover:border-indigo-800/80 transition-all group"
                 >
                   <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -353,6 +389,46 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-900 dark:text-white">Catálogo Completo</div>
                     <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">IA, streaming y servicios digitales</div>
+                  </div>
+                </a>
+
+                <a
+                  href="#cursos"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMobileMenuOpen(false);
+                    onSelectCategory?.('courses');
+                    const el = document.getElementById('cursos') || document.getElementById('catalogo');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-3 p-2.5 rounded-xl border border-amber-200/80 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 transition-all group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <GraduationCap className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-amber-900 dark:text-amber-300">Cursos & Masterclasses</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">IA, Marketing, Edición & Vitalicios</div>
+                  </div>
+                </a>
+
+                <a
+                  href="#recursos"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMobileMenuOpen(false);
+                    onSelectCategory?.('resources');
+                    const el = document.getElementById('recursos') || document.getElementById('catalogo');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-3 p-2.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 transition-all group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300">Recursos & Packs</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Plantillas Canva, Prompts & Overlays</div>
                   </div>
                 </a>
 

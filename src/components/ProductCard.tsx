@@ -16,6 +16,11 @@ import {
   Music,
   Glasses,
   MonitorPlay,
+  GraduationCap,
+  BookOpen,
+  Layers,
+  FolderGit2,
+  TrendingUp,
   Star,
   Zap,
   ShieldCheck,
@@ -111,6 +116,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         return <Glasses className={iconClass} />;
       case 'monitor-play':
         return <MonitorPlay className={iconClass} />;
+      case 'graduation-cap':
+        return <GraduationCap className={iconClass} />;
+      case 'book-open':
+        return <BookOpen className={iconClass} />;
+      case 'layers':
+        return <Layers className={iconClass} />;
+      case 'folder-git-2':
+        return <FolderGit2 className={iconClass} />;
+      case 'trending-up':
+        return <TrendingUp className={iconClass} />;
       default:
         return <Sparkles className={iconClass} />;
     }
@@ -151,7 +166,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div>
           <div className="flex items-center justify-between gap-1.5 mb-2">
             <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
-              {product.category === 'ai' ? 'IA & Pro' : 'Streaming 4K'}
+              {product.category === 'courses'
+                ? '🎓 Curso'
+                : product.category === 'resources'
+                ? '📦 Recurso'
+                : product.category === 'ai'
+                ? 'IA & Pro'
+                : 'Streaming 4K'}
             </span>
 
             {/* Stock Availability / Urgent Scarcity Badge (< 3 units) */}

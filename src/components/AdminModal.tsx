@@ -41,6 +41,8 @@ import {
   Image as ImageIcon,
   History,
   FileText,
+  GraduationCap,
+  Layers,
 } from 'lucide-react';
 import { Product, StoreSettings, Claim, PaymentMethod, SaleRecord } from '../types';
 import {
@@ -50,6 +52,7 @@ import {
   updateProductStock,
   saveSettingsToFirestore,
   seedProductsCollection,
+  seedCategoryProducts,
   DEFAULT_PAYMENT_METHODS,
   savePaymentMethodsToFirestore,
 } from '../services/storeService';
@@ -64,6 +67,9 @@ import { generateProductDescription } from '../services/aiService';
 import { AdminSalesTab } from './admin/AdminSalesTab';
 import { AdminSalesHistoryTab } from './admin/AdminSalesHistoryTab';
 import { AdminTextsTab } from './admin/AdminTextsTab';
+import { MembershipModal } from './admin/MembershipModal';
+import { CourseModal } from './admin/CourseModal';
+import { ResourceModal } from './admin/ResourceModal';
 
 interface AdminModalProps {
   products: Product[];
@@ -86,13 +92,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onLogout,
   onToast,
 }) => {
-  const [activeTab, setActiveTab] = useState<'products' | 'sales_history' | 'sales' | 'brand' | 'texts' | 'payments' | 'cloud' | 'claims' | 'security'>('sales_history');
+  const [activeTab, setActiveTab] = useState<
+    'products' | 'courses' | 'resources' | 'sales_history' | 'sales' | 'brand' | 'texts' | 'payments' | 'cloud' | 'claims' | 'security'
+  >('sales_history');
 
   // Product Form state
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [prodName, setProdName] = useState('');
-  const [prodCategory, setProdCategory] = useState<'ai' | 'streaming' | 'utility'>('ai');
+  const [prodCategory, setProdCategory] = useState<'ai' | 'streaming' | 'courses' | 'resources' | 'utility'>('ai');
   const [prodTag, setProdTag] = useState('');
   const [prodDesc, setProdDesc] = useState('');
   const [prodImageUrl, setProdImageUrl] = useState('');
@@ -413,11 +421,64 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [confirmPass, setConfirmPass] = useState('');
   const [credStatus, setCredStatus] = useState<{ msg: string; success: boolean } | null>(null);
 
-  const openNewForm = () => {
+  // Dedicated Modal States for Products, Courses & Resources (Separated Categories)
+  const [membershipModalOpen, setMembershipModalOpen] = useState(false);
+  const [editingMembership, setEditingMembership] = useState<Product | null>(null);
+
+  const [courseModalOpen, setCourseModalOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Product | null>(null);
+
+  const [resourceModalOpen, setResourceModalOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<Product | null>(null);
+
+  const openNewMembership = () => {
+    setEditingMembership(null);
+    setMembershipModalOpen(true);
+  };
+
+  const openEditMembership = (p: Product) => {
+    setEditingMembership(p);
+    setMembershipModalOpen(true);
+  };
+
+  const openNewCourse = () => {
+    setEditingCourse(null);
+    setCourseModalOpen(true);
+  };
+
+  const openEditCourse = (p: Product) => {
+    setEditingCourse(p);
+    setCourseModalOpen(true);
+  };
+
+  const openNewResource = () => {
+    setEditingResource(null);
+    setResourceModalOpen(true);
+  };
+
+  const openEditResource = (p: Product) => {
+    setEditingResource(p);
+    setResourceModalOpen(true);
+  };
+
+  const handleSaveProductUnified = async (product: Product) => {
+    await saveProductToFirestore(product);
+  };
+
+  const openNewForm = (defaultCategory?: 'ai' | 'streaming' | 'courses' | 'resources' | 'utility') => {
     setEditingId(null);
     setProdName('');
-    setProdCategory('ai');
-    setProdTag('');
+    const targetCat =
+      defaultCategory ||
+      (activeTab === 'courses' ? 'courses' : activeTab === 'resources' ? 'resources' : 'ai');
+    setProdCategory(targetCat);
+    setProdTag(
+      targetCat === 'courses'
+        ? 'Certificación • Acceso Vitalicio'
+        : targetCat === 'resources'
+        ? 'Descarga Inmediata • Google Drive'
+        : ''
+    );
     setProdDesc('');
     setProdImageUrl('');
     setProdCoverImageUrl('');
@@ -426,8 +487,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setProdDurationValue(1);
     setProdAvailable(true);
     setProdStock(10);
-    setProdP1Name('1 Mes');
-    setProdP1Price('S/ 29.90');
+    setProdP1Name(
+      targetCat === 'courses'
+        ? 'Acceso Completo + Drive'
+        : targetCat === 'resources'
+        ? 'Acceso Permanente Drive'
+        : '1 Mes'
+    );
+    setProdP1Price(
+      targetCat === 'courses'
+        ? 'S/ 29.00'
+        : targetCat === 'resources'
+        ? 'S/ 19.90'
+        : 'S/ 29.90'
+    );
     setProdP2Name('');
     setProdP2Price('');
     setProdRating('');
@@ -618,17 +691,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       tag: prodTag.trim() || 'Membresía',
       desc: prodDesc.trim(),
       imageUrl: safeImageUrl,
-      coverImageUrl: safeCoverImageUrl || undefined,
+      coverImageUrl: safeCoverImageUrl || '',
       accountType: prodAccountType,
       durationUnit: prodDurationUnit,
       durationValue: Number(prodDurationValue) || 1,
       durationText,
       available: prodAvailable,
       stock: Math.max(0, Number(prodStock) || 0),
-      rating: prodRating.trim() || undefined,
-      activationsCount: prodActivationsCount.trim() || undefined,
+      rating: prodRating.trim() || '4.9',
+      activationsCount: prodActivationsCount.trim() || '+1.500',
       plans,
-      icon: prodCategory === 'ai' ? 'sparkles' : 'film',
+      icon:
+        prodCategory === 'courses'
+          ? 'graduation-cap'
+          : prodCategory === 'resources'
+          ? 'layers'
+          : prodCategory === 'ai'
+          ? 'sparkles'
+          : 'film',
     };
 
     try {
@@ -700,6 +780,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
+  const handleSeedCategory = async (cat: 'courses' | 'resources') => {
+    setIsSeeding(true);
+    try {
+      const result = await seedCategoryProducts(cat);
+      onToast(result.message);
+    } catch (err) {
+      console.error(err);
+      onToast(`Error al inicializar ${cat === 'courses' ? 'cursos' : 'recursos'}.`);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   const handleChangeCreds = (e: React.FormEvent) => {
     e.preventDefault();
     setCredStatus(null);
@@ -731,7 +824,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   interface AdminNavItem {
-    id: 'products' | 'sales_history' | 'sales' | 'brand' | 'texts' | 'payments' | 'cloud' | 'claims' | 'security';
+    id: 'products' | 'courses' | 'resources' | 'sales_history' | 'sales' | 'brand' | 'texts' | 'payments' | 'cloud' | 'claims' | 'security';
     label: string;
     shortLabel: string;
     subtitle: string;
@@ -745,18 +838,40 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     items: AdminNavItem[];
   }
 
+  const membershipProducts = products.filter((p) => p.category !== 'courses' && p.category !== 'resources');
+  const courseProducts = products.filter((p) => p.category === 'courses');
+  const resourceProducts = products.filter((p) => p.category === 'resources');
+
   const sidebarNavGroups: AdminNavGroup[] = [
     {
       group: 'GESTIÓN COMERCIAL',
       items: [
         {
           id: 'products',
-          label: 'Gestor de Productos',
-          shortLabel: 'Productos',
-          subtitle: `${products.length} productos y planes`,
+          label: 'Membresías & Cuentas',
+          shortLabel: 'Membresías',
+          subtitle: `${membershipProducts.length} cuentas Streaming & IA`,
           icon: Package,
-          badge: products.length.toString(),
+          badge: membershipProducts.length.toString(),
           badgeColor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300',
+        },
+        {
+          id: 'courses',
+          label: 'Gestor de Cursos',
+          shortLabel: 'Cursos',
+          subtitle: `${courseProducts.length} cursos y masterclasses`,
+          icon: GraduationCap,
+          badge: courseProducts.length.toString(),
+          badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300',
+        },
+        {
+          id: 'resources',
+          label: 'Gestor de Recursos',
+          shortLabel: 'Recursos',
+          subtitle: `${resourceProducts.length} packs y plantillas`,
+          icon: Layers,
+          badge: resourceProducts.length.toString(),
+          badgeColor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300',
         },
         {
           id: 'sales_history',
@@ -1056,11 +1171,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         {/* Tab 1: Products */}
         {activeTab === 'products' && (
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Productos activos sincronizados en Firestore
-              </span>
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Package className="w-4 h-4 text-indigo-500" />
+                  <span>Membresías & Cuentas Digitales</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                    {membershipProducts.length} cuentas
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Gestiona cuentas de Streaming, Inteligencia Artificial y Utilidades.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleSeed(true)}
@@ -1073,25 +1197,72 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={openNewForm}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm"
+                  onClick={openNewMembership}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Nuevo Producto</span>
+                  <span>Nueva Membresía</span>
                 </button>
               </div>
             </div>
 
-            {/* Product Form */}
-            {showProductForm && (
+            {/* Informational Separation Notice Card */}
+            <div className="p-3 bg-gradient-to-r from-indigo-50/80 via-purple-50/60 to-slate-50/50 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-slate-900/40 rounded-xl border border-indigo-200/60 dark:border-indigo-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">
+              <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shrink-0" />
+                <span>
+                  <strong>Organización por categorías separadas:</strong> Cada sección (Membresías, Cursos y Recursos) tiene su propia modal de edición con datos independientes sin cruces de información.
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('courses')}
+                  className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>Ver Cursos ({courseProducts.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('resources')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Ver Recursos ({resourceProducts.length})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Legacy inline product form replaced by dedicated MembershipModal, CourseModal and ResourceModal */}
+            {false && (
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs animate-in fade-in duration-100">
                 <div className="flex items-center justify-between mb-2">
-                  <strong className="font-extrabold text-slate-800">
-                    {editingId ? 'Editar Producto' : 'Agregar Nuevo Producto'}
+                  <strong className="font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                    {prodCategory === 'courses' ? (
+                      <GraduationCap className="w-4 h-4 text-amber-500" />
+                    ) : prodCategory === 'resources' ? (
+                      <Layers className="w-4 h-4 text-emerald-500" />
+                    ) : (
+                      <Package className="w-4 h-4 text-indigo-500" />
+                    )}
+                    <span>
+                      {editingId
+                        ? prodCategory === 'courses'
+                          ? 'Editar Curso / Masterclass'
+                          : prodCategory === 'resources'
+                          ? 'Editar Recurso / Pack Digital'
+                          : 'Editar Membresía'
+                        : prodCategory === 'courses'
+                        ? 'Agregar Nuevo Curso / Masterclass'
+                        : prodCategory === 'resources'
+                        ? 'Agregar Nuevo Recurso / Pack Digital'
+                        : 'Agregar Nueva Membresía'}
+                    </span>
                   </strong>
                   <button
                     onClick={() => setShowProductForm(false)}
-                    className="text-slate-400 hover:text-slate-600"
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -1119,11 +1290,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <select
                         value={prodCategory}
                         onChange={(e) => setProdCategory(e.target.value as any)}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 focus:outline-none"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-bold focus:outline-none"
                       >
-                        <option value="ai">Inteligencia Artificial</option>
-                        <option value="streaming">Streaming & Series</option>
-                        <option value="utility">Utilidades & Otros</option>
+                        <option value="ai">🤖 Inteligencia Artificial</option>
+                        <option value="streaming">🎬 Streaming & Series</option>
+                        <option value="courses">🎓 Cursos & Masterclasses</option>
+                        <option value="resources">📦 Recursos & Packs Digitales</option>
+                        <option value="utility">⚙️ Utilidades & Herramientas</option>
                       </select>
                     </div>
                     <div>
@@ -1551,7 +1724,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {products.map((p) => (
+                  {membershipProducts.map((p) => (
                     <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                       <td className="p-3">
                         {p.imageUrl ? (
@@ -1618,8 +1791,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       </td>
                       <td className="p-3 text-right space-x-2">
                         <button
-                          onClick={() => openEditForm(p)}
-                          className="font-bold text-indigo-600 hover:text-indigo-800 text-xs inline-flex items-center gap-1"
+                          onClick={() => openEditMembership(p)}
+                          className="font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-xs inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Edit className="w-3 h-3" /> Editar
                         </button>
@@ -1632,10 +1805,418 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       </td>
                     </tr>
                   ))}
-                  {products.length === 0 && (
+                  {membershipProducts.length === 0 && (
                     <tr>
                       <td colSpan={6} className="p-6 text-center text-slate-400">
-                        No hay productos en la base de datos. Haz clic en "Sembrar Datos Iniciales" para cargar el catálogo.
+                        No hay membresías en la base de datos. Haz clic en "Sembrar Datos Iniciales" para cargar el catálogo.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Gestor de Cursos (Exclusivo, sin mezclar) */}
+        {activeTab === 'courses' && (
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-amber-500" />
+                  <span>Gestor de Cursos & Masterclasses</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                    {courseProducts.length} cursos registrados
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Administra formaciones completas, masterclasses y certificaciones de manera 100% independiente de las membresías.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {courseProducts.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleSeedCategory('courses')}
+                    disabled={isSeeding}
+                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
+                  >
+                    <Database className="w-3.5 h-3.5 text-amber-600" />
+                    <span>{isSeeding ? 'Cargando...' : 'Cargar Cursos de Ejemplo'}</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={openNewCourse}
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black flex items-center gap-1 shadow-sm cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Nuevo Curso / Masterclass</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Stats for Courses */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40">
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase block">Total Cursos</span>
+                <span className="text-lg font-black text-slate-900 dark:text-white">{courseProducts.length}</span>
+              </div>
+              <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200/60 dark:border-purple-900/40">
+                <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase block">Formato Entrega</span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white">Google Drive + Vitalicio</span>
+              </div>
+              <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40">
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">Cursos con Cupo</span>
+                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                  {courseProducts.filter((c) => c.available).length}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-200/60 dark:border-indigo-900/40">
+                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase block">Calificación Ref.</span>
+                <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">5.0 ★</span>
+              </div>
+            </div>
+
+            {/* Courses Table */}
+            <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+              <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+                <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="p-3">Portada / Logo</th>
+                    <th className="p-3">Curso & Temario</th>
+                    <th className="p-3">Certificación / Tag</th>
+                    <th className="p-3">Inversión (S/)</th>
+                    <th className="p-3">Alumnos / Activaciones</th>
+                    <th className="p-3">Rating</th>
+                    <th className="p-3">Cupos / Stock</th>
+                    <th className="p-3">Disponibilidad</th>
+                    <th className="p-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                  {courseProducts.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="p-3">
+                        {p.imageUrl ? (
+                          <img
+                            src={p.imageUrl}
+                            alt=""
+                            className="w-7 h-7 rounded-lg object-contain p-0.5 border border-slate-200 dark:border-slate-700 bg-white"
+                          />
+                        ) : (
+                          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center font-bold">
+                            <GraduationCap className="w-4 h-4" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 font-bold text-slate-800 dark:text-slate-100 max-w-[220px]">
+                        <div className="truncate">{p.name}</div>
+                        <span className="text-[10px] text-slate-400 font-normal line-clamp-1">{p.desc}</span>
+                      </td>
+                      <td className="p-3">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                          {p.tag || 'Acceso Vitalicio'}
+                        </span>
+                      </td>
+                      <td className="p-3 font-bold text-amber-600 dark:text-amber-400">
+                        {p.plans[0]?.price || 'S/ 29.00'}
+                      </td>
+                      <td className="p-3 font-semibold text-slate-700 dark:text-slate-300">
+                        {p.activationsCount || '+1.200 Alumnos'}
+                      </td>
+                      <td className="p-3 font-bold text-amber-500">
+                        {p.rating || '5.0'} ★
+                      </td>
+                      <td className="p-3">
+                        <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const curr = typeof p.stock === 'number' ? p.stock : 10;
+                              await updateProductStock(p.id, Math.max(0, curr - 1));
+                              onToast(`Cupos de "${p.name}" actualizados a ${Math.max(0, curr - 1)}.`);
+                            }}
+                            className="w-4 h-4 rounded hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-600 dark:text-slate-300 cursor-pointer"
+                            title="Restar 1"
+                          >
+                            -
+                          </button>
+                          <span className="font-extrabold text-[11px] text-slate-800 dark:text-slate-100 min-w-[20px] text-center">
+                            {p.stock ?? 10}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const curr = typeof p.stock === 'number' ? p.stock : 10;
+                              await updateProductStock(p.id, curr + 1);
+                              onToast(`Cupos de "${p.name}" actualizados a ${curr + 1}.`);
+                            }}
+                            className="w-4 h-4 rounded hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-600 dark:text-slate-300 cursor-pointer"
+                            title="Sumar 1"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggle(p.id, p.available)}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer ${
+                            p.available
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                          }`}
+                        >
+                          {p.available ? 'Cupos Abiertos' : 'Agotado'}
+                        </button>
+                      </td>
+                      <td className="p-3 text-right space-x-2">
+                        <button
+                          onClick={() => openEditCourse(p)}
+                          className="font-bold text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-xs inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit className="w-3 h-3" /> Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(p.id, p.name)}
+                          className="font-bold text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 text-xs inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" /> Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {courseProducts.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="p-8 text-center text-slate-400">
+                        <GraduationCap className="w-8 h-8 text-amber-400 mx-auto mb-2 opacity-60" />
+                        <p className="font-bold text-slate-700 dark:text-slate-300">No hay cursos registrados en esta pestaña.</p>
+                        <p className="text-xs text-slate-400 mt-0.5 mb-3">
+                          Puedes crear tu primer curso o cargar los cursos de ejemplo recomendados.
+                        </p>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={openNewCourse}
+                            className="px-3.5 py-1.5 bg-amber-500 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
+                          >
+                            + Crear Primer Curso
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSeedCategory('courses')}
+                            className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                          >
+                            Cargar Cursos de Ejemplo
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Gestor de Recursos (Exclusivo, sin mezclar) */}
+        {activeTab === 'resources' && (
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-emerald-500" />
+                  <span>Gestor de Recursos & Packs Digitales</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    {resourceProducts.length} recursos registrados
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Administra mega packs de plantillas Canva, prompts de IA, librerías y descargables de Google Drive de manera separada.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {resourceProducts.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleSeedCategory('resources')}
+                    disabled={isSeeding}
+                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
+                  >
+                    <Database className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{isSeeding ? 'Cargando...' : 'Cargar Recursos de Ejemplo'}</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={openNewResource}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center gap-1 shadow-sm cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Nuevo Recurso / Pack</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Stats for Resources */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40">
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">Total Packs</span>
+                <span className="text-lg font-black text-slate-900 dark:text-white">{resourceProducts.length}</span>
+              </div>
+              <div className="p-3 rounded-xl bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200/60 dark:border-teal-900/40">
+                <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 uppercase block">Almacenamiento</span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white">Google Drive 100GB+</span>
+              </div>
+              <div className="p-3 rounded-xl bg-cyan-50/60 dark:bg-cyan-950/20 border border-cyan-200/60 dark:border-cyan-900/40">
+                <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-300 uppercase block">Packs Activos</span>
+                <span className="text-lg font-black text-cyan-600 dark:text-cyan-400">
+                  {resourceProducts.filter((r) => r.available).length}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-200/60 dark:border-indigo-900/40">
+                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase block">Calificación Ref.</span>
+                <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">4.95 ★</span>
+              </div>
+            </div>
+
+            {/* Resources Table */}
+            <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+              <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+                <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="p-3">Portada / Miniatura</th>
+                    <th className="p-3">Recurso & Contenido</th>
+                    <th className="p-3">Entrega / Tag</th>
+                    <th className="p-3">Inversión (S/)</th>
+                    <th className="p-3">Descargas / Activaciones</th>
+                    <th className="p-3">Rating</th>
+                    <th className="p-3">Stock / Licencias</th>
+                    <th className="p-3">Disponibilidad</th>
+                    <th className="p-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                  {resourceProducts.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="p-3">
+                        {p.imageUrl ? (
+                          <img
+                            src={p.imageUrl}
+                            alt=""
+                            className="w-7 h-7 rounded-lg object-contain p-0.5 border border-slate-200 dark:border-slate-700 bg-white"
+                          />
+                        ) : (
+                          <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold">
+                            <Layers className="w-4 h-4" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 font-bold text-slate-800 dark:text-slate-100 max-w-[220px]">
+                        <div className="truncate">{p.name}</div>
+                        <span className="text-[10px] text-slate-400 font-normal line-clamp-1">{p.desc}</span>
+                      </td>
+                      <td className="p-3">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          {p.tag || 'Google Drive'}
+                        </span>
+                      </td>
+                      <td className="p-3 font-bold text-emerald-600 dark:text-emerald-400">
+                        {p.plans[0]?.price || 'S/ 19.90'}
+                      </td>
+                      <td className="p-3 font-semibold text-slate-700 dark:text-slate-300">
+                        {p.activationsCount || '+2.500 Descargas'}
+                      </td>
+                      <td className="p-3 font-bold text-amber-500">
+                        {p.rating || '5.0'} ★
+                      </td>
+                      <td className="p-3">
+                        <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const curr = typeof p.stock === 'number' ? p.stock : 10;
+                              await updateProductStock(p.id, Math.max(0, curr - 1));
+                              onToast(`Licencias de "${p.name}" actualizadas a ${Math.max(0, curr - 1)}.`);
+                            }}
+                            className="w-4 h-4 rounded hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-600 dark:text-slate-300 cursor-pointer"
+                            title="Restar 1"
+                          >
+                            -
+                          </button>
+                          <span className="font-extrabold text-[11px] text-slate-800 dark:text-slate-100 min-w-[20px] text-center">
+                            {p.stock ?? 10}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const curr = typeof p.stock === 'number' ? p.stock : 10;
+                              await updateProductStock(p.id, curr + 1);
+                              onToast(`Licencias de "${p.name}" actualizadas a ${curr + 1}.`);
+                            }}
+                            className="w-4 h-4 rounded hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-600 dark:text-slate-300 cursor-pointer"
+                            title="Sumar 1"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggle(p.id, p.available)}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer ${
+                            p.available
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                          }`}
+                        >
+                          {p.available ? 'Descarga Activa' : 'Pausado'}
+                        </button>
+                      </td>
+                      <td className="p-3 text-right space-x-2">
+                        <button
+                          onClick={() => openEditResource(p)}
+                          className="font-bold text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 text-xs inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit className="w-3 h-3" /> Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(p.id, p.name)}
+                          className="font-bold text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 text-xs inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" /> Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {resourceProducts.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="p-8 text-center text-slate-400">
+                        <Layers className="w-8 h-8 text-emerald-400 mx-auto mb-2 opacity-60" />
+                        <p className="font-bold text-slate-700 dark:text-slate-300">No hay recursos ni packs registrados en esta pestaña.</p>
+                        <p className="text-xs text-slate-400 mt-0.5 mb-3">
+                          Puedes agregar tu primer pack digital o cargar las plantillas de ejemplo.
+                        </p>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={openNewResource}
+                            className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
+                          >
+                            + Crear Primer Recurso
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSeedCategory('resources')}
+                            className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                          >
+                            Cargar Recursos de Ejemplo
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -3629,6 +4210,40 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modales Dedicadas con Animación Dinámica e Información Separada por Categoría */}
+      <MembershipModal
+        isOpen={membershipModalOpen}
+        onClose={() => {
+          setMembershipModalOpen(false);
+          setEditingMembership(null);
+        }}
+        productToEdit={editingMembership}
+        onSave={handleSaveProductUnified}
+        onToast={onToast}
+      />
+
+      <CourseModal
+        isOpen={courseModalOpen}
+        onClose={() => {
+          setCourseModalOpen(false);
+          setEditingCourse(null);
+        }}
+        productToEdit={editingCourse}
+        onSave={handleSaveProductUnified}
+        onToast={onToast}
+      />
+
+      <ResourceModal
+        isOpen={resourceModalOpen}
+        onClose={() => {
+          setResourceModalOpen(false);
+          setEditingResource(null);
+        }}
+        productToEdit={editingResource}
+        onSave={handleSaveProductUnified}
+        onToast={onToast}
+      />
     </div>
   );
 };
