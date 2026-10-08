@@ -13,6 +13,7 @@ import {
   Moon,
   Sparkles,
   HelpCircle,
+  ShoppingBag,
 } from 'lucide-react';
 import { StoreSettings, PaymentMethod } from '../types';
 import { DEFAULT_PAYMENT_METHODS } from '../services/storeService';
@@ -24,6 +25,7 @@ interface FooterProps {
   onToggleTheme?: () => void;
   onOpenTerms: () => void;
   onOpenClaims: () => void;
+  onOpenMyPurchases?: () => void;
   onOpenAdminAuth?: () => void;
   onFilterCategory?: (cat: 'all' | 'ai' | 'streaming') => void;
 }
@@ -34,6 +36,7 @@ export const Footer: React.FC<FooterProps> = ({
   onToggleTheme,
   onOpenTerms,
   onOpenClaims,
+  onOpenMyPurchases,
   onOpenAdminAuth,
 }) => {
   const waUrl = `https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent(
@@ -158,6 +161,17 @@ export const Footer: React.FC<FooterProps> = ({
 
               {/* Legal interactive links */}
               <div className="space-y-1 pt-0.5">
+                {onOpenMyPurchases && (
+                  <button
+                    type="button"
+                    onClick={onOpenMyPurchases}
+                    className="w-full text-left text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-black flex items-center gap-2 py-1 transition-colors cursor-pointer group"
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5 text-indigo-500 shrink-0 group-hover:scale-110 transition-transform" />
+                    <span>Mis Compras &amp; Consultar Membresías</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={onOpenTerms}

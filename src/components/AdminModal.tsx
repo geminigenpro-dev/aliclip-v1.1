@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Package,
@@ -43,6 +43,8 @@ import {
   FileText,
   GraduationCap,
   Layers,
+  GripVertical,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Product, StoreSettings, Claim, PaymentMethod, SaleRecord } from '../types';
 import {
@@ -54,6 +56,8 @@ import {
   seedProductsCollection,
   seedCategoryProducts,
   DEFAULT_PAYMENT_METHODS,
+  DEFAULT_ADMIN_SECTIONS,
+  mergeAdminSectionsWithDefaults,
   savePaymentMethodsToFirestore,
 } from '../services/storeService';
 import { THEME_PRESETS, getThemePresetById } from '../services/themePresets';
@@ -64,12 +68,15 @@ import {
   compressProductImage,
 } from '../utils/imageCompressor';
 import { generateProductDescription } from '../services/aiService';
+import { getAdminIcon } from '../utils/adminIcons';
 import { AdminSalesTab } from './admin/AdminSalesTab';
 import { AdminSalesHistoryTab } from './admin/AdminSalesHistoryTab';
 import { AdminTextsTab } from './admin/AdminTextsTab';
 import { MembershipModal } from './admin/MembershipModal';
 import { CourseModal } from './admin/CourseModal';
 import { ResourceModal } from './admin/ResourceModal';
+import { AdminSectionManagerModal } from './admin/AdminSectionManagerModal';
+import { AdminBillingTab } from './admin/AdminBillingTab';
 
 interface AdminModalProps {
   products: Product[];
@@ -93,7 +100,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onToast,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'products' | 'courses' | 'resources' | 'sales_history' | 'sales' | 'brand' | 'texts' | 'payments' | 'cloud' | 'claims' | 'security'
+    'products' | 'courses' | 'resources' | 'sales_history' | 'sales' | 'brand' | 'texts' | 'payments' | 'billing' | 'cloud' | 'claims' | 'security'
   >('sales_history');
 
   // Product Form state
@@ -125,6 +132,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [savingSettings, setSavingSettings] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [showSectionManagerModal, setShowSectionManagerModal] = useState(false);
+
+  // Sync brandSettings when parent settings update
+  useEffect(() => {
+    setBrandSettings(settings);
+  }, [settings]);
 
   // In-app confirmation dialog state (replaces window.confirm blocked in sandboxed iframes)
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -842,125 +855,127 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const courseProducts = products.filter((p) => p.category === 'courses');
   const resourceProducts = products.filter((p) => p.category === 'resources');
 
-  const sidebarNavGroups: AdminNavGroup[] = [
-    {
-      group: 'GESTIÓN COMERCIAL',
-      items: [
-        {
-          id: 'products',
-          label: 'Membresías & Cuentas',
-          shortLabel: 'Membresías',
-          subtitle: `${membershipProducts.length} cuentas Streaming & IA`,
-          icon: Package,
-          badge: membershipProducts.length.toString(),
-          badgeColor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300',
-        },
-        {
-          id: 'courses',
-          label: 'Gestor de Cursos',
-          shortLabel: 'Cursos',
-          subtitle: `${courseProducts.length} cursos y masterclasses`,
-          icon: GraduationCap,
-          badge: courseProducts.length.toString(),
-          badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300',
-        },
-        {
-          id: 'resources',
-          label: 'Gestor de Recursos',
-          shortLabel: 'Recursos',
-          subtitle: `${resourceProducts.length} packs y plantillas`,
-          icon: Layers,
-          badge: resourceProducts.length.toString(),
-          badgeColor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300',
-        },
-        {
-          id: 'sales_history',
-          label: 'Historial de Ventas',
-          shortLabel: 'Historial',
-          subtitle: `${sales.length} ventas con filtros`,
-          icon: History,
-          badge: sales.length.toString(),
-          badgeColor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300',
-        },
-        {
-          id: 'sales',
-          label: 'Confirmar Venta',
-          shortLabel: 'Nueva Venta',
-          subtitle: 'Registrar y descontar stock',
-          icon: CheckCircle2,
-          badge: '+',
-          badgeColor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300',
-        },
-        {
-          id: 'payments',
-          label: 'Métodos de Pago',
-          shortLabel: 'Pagos',
-          subtitle: `${(brandSettings.paymentMethods || DEFAULT_PAYMENT_METHODS).length} pasarelas activas`,
-          icon: CreditCard,
-          badge: (brandSettings.paymentMethods || DEFAULT_PAYMENT_METHODS).length.toString(),
-          badgeColor: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-        },
-      ],
-    },
-    {
-      group: 'PERSONALIZACIÓN',
-      items: [
-        {
-          id: 'brand',
-          label: 'Marca & Colores',
-          shortLabel: 'Marca',
-          subtitle: 'Logos, tipografías y estilo',
-          icon: Palette,
-          badge: 'Editor',
-          badgeColor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300',
-        },
-        {
-          id: 'texts',
-          label: 'Textos & Contenido Web',
-          shortLabel: 'Textos Web',
-          subtitle: 'Títulos, pasos, FAQ y footer',
-          icon: FileText,
-          badge: 'Editable',
-          badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300',
-        },
-        {
-          id: 'claims',
-          label: 'Libro de Reclamaciones',
-          shortLabel: 'Reclamos',
-          subtitle: 'Atención al consumidor',
-          icon: BookOpen,
-          badge: claims.length.toString(),
-          badgeColor:
-            claims.length > 0
-              ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
-              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-        },
-      ],
-    },
-    {
-      group: 'INFRAESTRUCTURA & ACCESO',
-      items: [
-        {
-          id: 'cloud',
-          label: 'Nube & Semilla',
-          shortLabel: 'Nube',
-          subtitle: 'Firestore y sincronización',
-          icon: Cloud,
-          badge: 'En vivo',
-          badgeColor: 'bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300',
-        },
-        {
-          id: 'security',
-          label: 'Seguridad & Acceso',
-          shortLabel: 'Seguridad',
-          subtitle: 'Credenciales del admin',
-          icon: ShieldCheck,
-          badge: 'Admin',
-          badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300',
-        },
-      ],
-    },
-  ];
+  // Sidebar drag & drop state
+  const [sidebarDraggedId, setSidebarDraggedId] = useState<string | null>(null);
+  const [sidebarDragOverId, setSidebarDragOverId] = useState<string | null>(null);
+
+  const handleSidebarDragStart = (e: React.DragEvent, id: string) => {
+    setSidebarDraggedId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSidebarDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (sidebarDragOverId !== id) {
+      setSidebarDragOverId(id);
+    }
+  };
+
+  const handleSidebarDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!sidebarDraggedId || sidebarDraggedId === targetId) {
+      setSidebarDraggedId(null);
+      setSidebarDragOverId(null);
+      return;
+    }
+
+    const currentSections = mergeAdminSectionsWithDefaults(brandSettings.adminSections);
+
+    const sourceIdx = currentSections.findIndex((s) => s.id === sidebarDraggedId);
+    const targetIdx = currentSections.findIndex((s) => s.id === targetId);
+
+    if (sourceIdx !== -1 && targetIdx !== -1) {
+      const updated = [...currentSections];
+      const [moved] = updated.splice(sourceIdx, 1);
+      updated.splice(targetIdx, 0, moved);
+
+      const reordered = updated.map((sec, idx) => ({ ...sec, order: idx + 1 }));
+      const newSettings = { ...brandSettings, adminSections: reordered };
+      setBrandSettings(newSettings);
+      try {
+        await saveSettingsToFirestore(newSettings);
+        onToast('¡Orden de secciones actualizado!');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    setSidebarDraggedId(null);
+    setSidebarDragOverId(null);
+  };
+
+  // Build dynamic navigation from configured sections
+  const rawAdminSections = mergeAdminSectionsWithDefaults(brandSettings.adminSections);
+
+  const sortedAdminSections = [...rawAdminSections].sort((a, b) => a.order - b.order);
+  const enabledAdminSections = sortedAdminSections.filter((s) => s.enabled !== false);
+
+  const groupOrder = ['GESTIÓN COMERCIAL', 'PERSONALIZACIÓN', 'INFRAESTRUCTURA & ACCESO'];
+
+  const sidebarNavGroups: AdminNavGroup[] = groupOrder
+    .map((grpName) => {
+      const itemsInGroup = enabledAdminSections.filter((s) => (s.group || 'GESTIÓN COMERCIAL') === grpName);
+      return {
+        group: grpName,
+        items: itemsInGroup.map((sec) => {
+          const IconComp = getAdminIcon(sec.icon);
+          let badge = '1';
+          let badgeColor = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+          if (sec.id === 'products') {
+            badge = membershipProducts.length.toString();
+            badgeColor = 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300';
+          } else if (sec.id === 'courses') {
+            badge = courseProducts.length.toString();
+            badgeColor = 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300';
+          } else if (sec.id === 'resources') {
+            badge = resourceProducts.length.toString();
+            badgeColor = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300';
+          } else if (sec.id === 'sales_history') {
+            badge = sales.length.toString();
+            badgeColor = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300';
+          } else if (sec.id === 'sales') {
+            badge = '+';
+            badgeColor = 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300';
+          } else if (sec.id === 'payments') {
+            badge = (brandSettings.paymentMethods || DEFAULT_PAYMENT_METHODS).length.toString();
+            badgeColor = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+          } else if (sec.id === 'billing') {
+            badge = 'Facturas';
+            badgeColor = 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/60 dark:text-cyan-300';
+          } else if (sec.id === 'brand') {
+            badge = 'Editor';
+            badgeColor = 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300';
+          } else if (sec.id === 'texts') {
+            badge = 'Editable';
+            badgeColor = 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300';
+          } else if (sec.id === 'claims') {
+            badge = claims.length.toString();
+            badgeColor =
+              claims.length > 0
+                ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+          } else if (sec.id === 'cloud') {
+            badge = 'En vivo';
+            badgeColor = 'bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300';
+          } else if (sec.id === 'security') {
+            badge = 'Admin';
+            badgeColor = 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300';
+          }
+
+          return {
+            id: sec.id as any,
+            label: sec.label,
+            shortLabel: sec.shortLabel || sec.label,
+            subtitle: sec.subtitle || '',
+            icon: IconComp,
+            badge,
+            badgeColor,
+          };
+        }),
+      };
+    })
+    .filter((g) => g.items.length > 0);
 
   const allNavItems: AdminNavItem[] = sidebarNavGroups.reduce<AdminNavItem[]>(
     (acc, g) => acc.concat(g.items),
@@ -1020,7 +1035,28 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           {/* Lateral Sidebar (Desktop / Tablet) */}
           <aside className="hidden md:flex flex-col w-64 lg:w-72 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#0b0f19]/70 justify-between p-3.5 overflow-y-auto">
-            <div className="space-y-4">
+            <div className="space-y-3">
+              {/* Button to open Section Customizer */}
+              <button
+                type="button"
+                onClick={() => setShowSectionManagerModal(true)}
+                className="w-full p-2.5 rounded-xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 border border-indigo-200/90 dark:border-indigo-800/90 text-indigo-700 dark:text-indigo-300 flex items-center justify-between transition-all cursor-pointer shadow-2xs group"
+                title="Reorganizar posiciones (arrastrar y soltar), renombrar pestañas y elegir iconos profesionales"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-left truncate">
+                    <div className="text-xs font-extrabold leading-tight truncate">Personalizar Secciones</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Reordenar & Renombrar</div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                  Editar
+                </span>
+              </button>
+
               {sidebarNavGroups.map((group) => (
                 <div key={group.group} className="space-y-1">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-2 py-1">
@@ -1030,46 +1066,68 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     {group.items.map((item) => {
                       const Icon = item.icon;
                       const isActive = activeTab === item.id;
+                      const isDragging = sidebarDraggedId === item.id;
+                      const isOver = sidebarDragOverId === item.id;
+
                       return (
-                        <button
+                        <div
                           key={item.id}
-                          type="button"
-                          onClick={() => setActiveTab(item.id)}
-                          className={`w-full text-left p-2.5 rounded-xl transition-all flex items-center justify-between group cursor-pointer ${
-                            isActive
-                              ? 'bg-indigo-600 text-white shadow-sm'
-                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800/70'
-                          }`}
+                          draggable
+                          onDragStart={(e) => handleSidebarDragStart(e, item.id)}
+                          onDragOver={(e) => handleSidebarDragOver(e, item.id)}
+                          onDrop={(e) => handleSidebarDrop(e, item.id)}
+                          onDragEnd={() => {
+                            setSidebarDraggedId(null);
+                            setSidebarDragOverId(null);
+                          }}
+                          className={`rounded-xl transition-all relative ${
+                            isDragging ? 'opacity-40' : ''
+                          } ${isOver ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                                isActive
-                                  ? 'bg-white/20 text-white'
-                                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
-                              }`}
-                            >
-                              <Icon className="w-4 h-4" />
-                            </div>
-                            <div className="truncate">
-                              <div className={`text-xs font-bold truncate ${isActive ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
-                                {item.label}
-                              </div>
-                              <div className={`text-[10px] truncate ${isActive ? 'text-indigo-100' : 'text-slate-400 dark:text-slate-500'}`}>
-                                {item.subtitle}
-                              </div>
-                            </div>
-                          </div>
-                          <span
-                            className={`ml-2 px-1.5 py-0.5 text-[10px] font-bold rounded-md shrink-0 ${
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab(item.id)}
+                            className={`w-full text-left p-2.5 rounded-xl transition-all flex items-center justify-between group cursor-pointer ${
                               isActive
-                                ? 'bg-white/20 text-white'
-                                : item.badgeColor
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800/70'
                             }`}
                           >
-                            {item.badge}
-                          </span>
-                        </button>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                  isActive
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                                }`}
+                              >
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <div className="truncate">
+                                <div className={`text-xs font-bold truncate ${isActive ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
+                                  {item.label}
+                                </div>
+                                <div className={`text-[10px] truncate ${isActive ? 'text-indigo-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                                  {item.subtitle}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                              <span
+                                className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md ${
+                                  isActive
+                                    ? 'bg-white/20 text-white'
+                                    : item.badgeColor
+                                }`}
+                              >
+                                {item.badge}
+                              </span>
+                              <span title="Arrastrar para mover posición">
+                                <GripVertical className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 transition-opacity text-slate-400 cursor-grab active:cursor-grabbing" />
+                              </span>
+                            </div>
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -1165,6 +1223,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     {currentTab.subtitle}
                   </p>
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSectionManagerModal(true)}
+                  className="px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Personalizar, renombrar y reordenar secciones (arrastrar y soltar, iconos y visibilidad)"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Gestionar Secciones</span>
+                </button>
               </div>
             </div>
 
@@ -3985,6 +4054,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           </div>
         )}
 
+        {/* Tab: Facturación & Comprobantes */}
+        {activeTab === 'billing' && (
+          <div className="flex-1 overflow-y-auto">
+            <AdminBillingTab
+              settings={brandSettings}
+              onUpdateSettings={(newSettings) => setBrandSettings(newSettings)}
+              onToast={onToast}
+            />
+          </div>
+        )}
+
         {/* Tab 3: Cloud & Sync */}
         {activeTab === 'cloud' && (
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs text-slate-600 dark:text-slate-300">
@@ -4242,6 +4322,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         }}
         productToEdit={editingResource}
         onSave={handleSaveProductUnified}
+        onToast={onToast}
+      />
+
+      {/* Modal para Personalizar y Reorganizar Secciones (Arrastrar y Soltar, Renombrar, Iconos y Visibilidad) */}
+      <AdminSectionManagerModal
+        isOpen={showSectionManagerModal}
+        onClose={() => setShowSectionManagerModal(false)}
+        settings={brandSettings}
+        onUpdateSettings={(newSettings) => setBrandSettings(newSettings)}
         onToast={onToast}
       />
     </div>

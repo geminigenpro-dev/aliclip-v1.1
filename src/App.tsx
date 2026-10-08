@@ -53,6 +53,9 @@ const AdminAuthModal = lazy(() =>
 const QuickViewModal = lazy(() =>
   import('./components/QuickViewModal').then((m) => ({ default: m.QuickViewModal }))
 );
+const MyPurchasesModal = lazy(() =>
+  import('./components/MyPurchasesModal').then((m) => ({ default: m.MyPurchasesModal }))
+);
 import {
   subscribeToProducts,
   subscribeToSettings,
@@ -60,9 +63,12 @@ import {
   subscribeToSales,
   seedProductsCollection,
   DEFAULT_SETTINGS,
+  DEFAULT_STORE_CATEGORIES,
+  DEFAULT_STOREFRONT_SECTIONS,
   INITIAL_PRODUCTS,
   INITIAL_SALES,
 } from './services/storeService';
+import { getAdminIcon } from './utils/adminIcons';
 import { Product, ProductPlan, StoreSettings, Claim, SaleRecord } from './types';
 
 export default function App() {
@@ -84,6 +90,8 @@ export default function App() {
   const [showClaims, setShowClaims] = useState(false);
   const [showAdminAuth, setShowAdminAuth] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showMyPurchases, setShowMyPurchases] = useState(false);
+  const [myPurchasesQuery, setMyPurchasesQuery] = useState('');
 
   // Admin session
   const [isAdmin, setIsAdmin] = useState(() => {
@@ -152,6 +160,8 @@ export default function App() {
         setCategory('streaming');
       } else if (hash === '#ia') {
         setCategory('ai');
+      } else if (hash === '#mis-compras' || hash === '#compras' || hash === '#mis-pedidos') {
+        setShowMyPurchases(true);
       }
     };
     handleHash();
@@ -259,8 +269,8 @@ export default function App() {
         );
       }
 
-      // 4. Sales records subscription only if admin session or admin panel is active
-      if (isAdmin || showAdminPanel) {
+      // 4. Sales records subscription only if admin session, admin panel or customer purchases is open
+      if (isAdmin || showAdminPanel || showMyPurchases) {
         unsubSales = subscribeToSales(
           (salesList) => {
             setSales(salesList);
@@ -279,7 +289,7 @@ export default function App() {
       if (unsubClaims) unsubClaims();
       if (unsubSales) unsubSales();
     };
-  }, [isAdmin, showClaims, showAdminPanel]);
+  }, [isAdmin, showClaims, showAdminPanel, showMyPurchases]);
 
   // Keyboard shortcut & hash detection for discreet admin login
   useEffect(() => {
@@ -342,8 +352,29 @@ export default function App() {
     showToast('Sesión de administrador cerrada. Panel oculto.');
   };
 
-  // Filter products by category and search
+  // Configured store categories
+  const configuredCategories = Array.isArray(settings.storeCategories) && settings.storeCategories.length > 0
+    ? [...settings.storeCategories].sort((a, b) => a.order - b.order)
+    : DEFAULT_STORE_CATEGORIES;
+
+  const isCategoryEnabled = (catId: string) => {
+    if (catId === 'all') return true;
+    const cat = configuredCategories.find((c) => c.id === catId);
+    return cat ? cat.enabled !== false : true;
+  };
+
+  // If active category was disabled in admin, auto-fallback to 'all'
+  useEffect(() => {
+    if (category !== 'all' && !isCategoryEnabled(category)) {
+      setCategory('all');
+    }
+  }, [settings.storeCategories, category]);
+
+  // Filter products by category and search (hiding products from disabled categories)
   const filteredProducts = products.filter((p) => {
+    if (p.category && !isCategoryEnabled(p.category)) {
+      return false;
+    }
     const matchesCat = category === 'all' || p.category === category;
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
@@ -354,11 +385,29 @@ export default function App() {
     return matchesCat && matchesSearch;
   });
 
-  const totalAll = products.length;
+  const totalAll = products.filter((p) => !p.category || isCategoryEnabled(p.category)).length;
   const totalAi = products.filter((p) => p.category === 'ai').length;
   const totalStreaming = products.filter((p) => p.category === 'streaming').length;
   const totalCourses = products.filter((p) => p.category === 'courses').length;
   const totalResources = products.filter((p) => p.category === 'resources').length;
+
+  const getCategoryCount = (catId: string) => {
+    if (catId === 'ai') return totalAi;
+    if (catId === 'streaming') return totalStreaming;
+    if (catId === 'courses') return totalCourses;
+    if (catId === 'resources') return totalResources;
+    return totalAll;
+  };
+
+  // Storefront blocks visibility
+  const storefrontConfig = Array.isArray(settings.storefrontSections) && settings.storefrontSections.length > 0
+    ? settings.storefrontSections
+    : DEFAULT_STOREFRONT_SECTIONS;
+
+  const isSectionEnabled = (secId: string) => {
+    const sec = storefrontConfig.find((s) => s.id === secId);
+    return sec ? sec.enabled !== false : true;
+  };
 
   const handleDirectBuyFromCard = (product: Product, plan: ProductPlan) => {
     setSelectedProduct(product);
@@ -415,6 +464,7 @@ export default function App() {
         onOpenAdmin={() => setShowAdminPanel(true)}
         onLogoutAdmin={handleAdminLogout}
         onOpenTerms={() => setShowTerms(true)}
+        onOpenMyPurchases={() => setShowMyPurchases(true)}
         onBrandClick={handleBrandTripleClick}
         theme={theme}
         onToggleTheme={handleToggleTheme}
@@ -434,7 +484,7 @@ export default function App() {
       />
 
       {/* Animated LED Screen Ticker (Infinite Seamless Loop Marquee) */}
-      <BenefitsTicker settings={settings} />
+      {isSectionEnabled('benefitsTicker') && <BenefitsTicker settings={settings} />}
 
       {/* Catalog Section - Immediate First Viewport Access */}
       <main id="catalogo" className="pt-2 pb-12 bg-slate-50 dark:bg-[#070913] flex-1 transition-colors duration-200">
@@ -467,97 +517,39 @@ export default function App() {
                 </span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setCategory('ai')}
-                aria-label="Filtrar por Inteligencia Artificial"
-                className={`min-h-[42px] px-3.5 py-2 rounded-xl font-black transition-all duration-300 flex items-center gap-2 cursor-pointer ${
-                  category === 'ai'
-                    ? 'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)]'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                <Bot className="w-3.5 h-3.5 text-indigo-400" />
-                <span>{settings.categoryTabAi || 'Inteligencia Artificial'}</span>
-                <span
-                  className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
-                    category === 'ai'
-                      ? 'bg-white/25 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  {totalAi}
-                </span>
-              </button>
+              {configuredCategories
+                .filter((cat) => cat.enabled !== false)
+                .map((cat) => {
+                  const IconComp = getAdminIcon(cat.icon);
+                  const isSelected = category === cat.id;
+                  const count = getCategoryCount(cat.id);
 
-              <button
-                type="button"
-                onClick={() => setCategory('streaming')}
-                aria-label="Filtrar por Streaming y Series"
-                className={`min-h-[42px] px-3.5 py-2 rounded-xl font-black transition-all duration-300 flex items-center gap-2 cursor-pointer ${
-                  category === 'streaming'
-                    ? 'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)]'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                <Film className="w-3.5 h-3.5 text-cyan-400" />
-                <span>{settings.categoryTabStreaming || 'Streaming & Series'}</span>
-                <span
-                  className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
-                    category === 'streaming'
-                      ? 'bg-white/25 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  {totalStreaming}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCategory('courses')}
-                aria-label="Filtrar por Cursos"
-                className={`min-h-[42px] px-3.5 py-2 rounded-xl font-black transition-all duration-300 flex items-center gap-2 cursor-pointer ${
-                  category === 'courses'
-                    ? 'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)]'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
-                <span>{settings.categoryTabCourses || 'Cursos & Masterclasses'}</span>
-                <span
-                  className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
-                    category === 'courses'
-                      ? 'bg-white/25 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  {totalCourses}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCategory('resources')}
-                aria-label="Filtrar por Recursos"
-                className={`min-h-[42px] px-3.5 py-2 rounded-xl font-black transition-all duration-300 flex items-center gap-2 cursor-pointer ${
-                  category === 'resources'
-                    ? 'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)]'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{settings.categoryTabResources || 'Recursos & Packs'}</span>
-                <span
-                  className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
-                    category === 'resources'
-                      ? 'bg-white/25 text-white'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  {totalResources}
-                </span>
-              </button>
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setCategory(cat.id as any)}
+                      aria-label={`Filtrar por ${cat.label}`}
+                      className={`min-h-[42px] px-3.5 py-2 rounded-xl font-black transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)]'
+                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <IconComp className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-indigo-400'}`} />
+                      <span>{cat.label}</span>
+                      <span
+                        className={`ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md ${
+                          isSelected
+                            ? 'bg-white/25 text-white'
+                            : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
             </div>
 
             {/* Right Side Status Indicator */}
@@ -587,7 +579,7 @@ export default function App() {
           <div id="recursos" className="scroll-mt-24" />
 
           {/* Cursos Spotlight Section Header Banner */}
-          {category === 'courses' && (
+          {category === 'courses' && isCategoryEnabled('courses') && (
             <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-indigo-500/10 border border-amber-500/30 dark:border-amber-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-200">
               <div className="flex items-start sm:items-center gap-3.5">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shrink-0 shadow-md">
@@ -627,7 +619,7 @@ export default function App() {
           )}
 
           {/* Recursos Spotlight Section Header Banner */}
-          {category === 'resources' && (
+          {category === 'resources' && isCategoryEnabled('resources') && (
             <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 dark:border-emerald-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-200">
               <div className="flex items-start sm:items-center gap-3.5">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-md">
@@ -727,61 +719,69 @@ export default function App() {
       </main>
 
       {/* Lazy-Loaded Below-The-Scroll Sections to optimize initial load & FCP */}
-      <LazySection id="opiniones" minHeight="480px">
-        <Suspense
-          fallback={
-            <div className="py-16 text-center">
-              <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin mx-auto" />
-            </div>
-          }
-        >
-          <CustomerReviews settings={settings} />
-        </Suspense>
-      </LazySection>
+      {isSectionEnabled('reviews') && (
+        <LazySection id="opiniones" minHeight="480px">
+          <Suspense
+            fallback={
+              <div className="py-16 text-center">
+                <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin mx-auto" />
+              </div>
+            }
+          >
+            <CustomerReviews settings={settings} />
+          </Suspense>
+        </LazySection>
+      )}
 
-      <LazySection minHeight="400px">
-        <Suspense
-          fallback={
-            <div className="py-14 text-center">
-              <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin mx-auto" />
-            </div>
-          }
-        >
-          <PaymentMethods
-            settings={settings}
-            onOpenPaymentInfo={() => {
-              if (products.length > 0) {
-                setSelectedProduct(products[0]);
-                setSelectedPlan(products[0].plans[0] || null);
-              }
-            }}
-          />
-        </Suspense>
-      </LazySection>
+      {isSectionEnabled('payments') && (
+        <LazySection minHeight="400px">
+          <Suspense
+            fallback={
+              <div className="py-14 text-center">
+                <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin mx-auto" />
+              </div>
+            }
+          >
+            <PaymentMethods
+              settings={settings}
+              onOpenPaymentInfo={() => {
+                if (products.length > 0) {
+                  setSelectedProduct(products[0]);
+                  setSelectedPlan(products[0].plans[0] || null);
+                }
+              }}
+            />
+          </Suspense>
+        </LazySection>
+      )}
 
-      <LazySection minHeight="340px">
-        <Suspense
-          fallback={
-            <div className="py-12 text-center">
-              <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin mx-auto" />
-            </div>
-          }
-        >
-          <PurchaseProcess settings={settings} />
-        </Suspense>
-      </LazySection>
+      {isSectionEnabled('purchaseProcess') && (
+        <LazySection minHeight="340px">
+          <Suspense
+            fallback={
+              <div className="py-12 text-center">
+                <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin mx-auto" />
+              </div>
+            }
+          >
+            <PurchaseProcess settings={settings} />
+          </Suspense>
+        </LazySection>
+      )}
 
-      <LazySection id="faq" minHeight="450px">
-        <Suspense
-          fallback={
-            <div className="py-14 text-center">
-              <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin mx-auto" />
-            </div>
-          }
-        >
-          <FaqSection settings={settings} />
-        </Suspense>
-      </LazySection>
+      {isSectionEnabled('faq') && (
+        <LazySection id="faq" minHeight="450px">
+          <Suspense
+            fallback={
+              <div className="py-14 text-center">
+                <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin mx-auto" />
+              </div>
+            }
+          >
+            <FaqSection settings={settings} />
+          </Suspense>
+        </LazySection>
+      )}
 
       <LazySection minHeight="320px">
         <Suspense
@@ -796,6 +796,7 @@ export default function App() {
             onFilterCategory={(cat) => setCategory(cat as any)}
             onOpenTerms={() => setShowTerms(true)}
             onOpenClaims={() => setShowClaims(true)}
+            onOpenMyPurchases={() => setShowMyPurchases(true)}
             onOpenAdminAuth={() => {
               if (isAdmin) setShowAdminPanel(true);
               else setShowAdminAuth(true);
@@ -864,6 +865,13 @@ export default function App() {
               setSelectedPlan(null);
             }}
             onToast={showToast}
+            onSaleCreated={(newSale) => {
+              setSales((prev) => [newSale, ...prev.filter((s) => s.id !== newSale.id)]);
+            }}
+            onOpenMyPurchases={(q) => {
+              if (q) setMyPurchasesQuery(q);
+              setShowMyPurchases(true);
+            }}
           />
         )}
 
@@ -900,6 +908,20 @@ export default function App() {
             onClose={() => setShowAdminPanel(false)}
             onLogout={handleAdminLogout}
             onToast={showToast}
+          />
+        )}
+
+        {showMyPurchases && (
+          <MyPurchasesModal
+            isOpen={showMyPurchases}
+            onClose={() => {
+              setShowMyPurchases(false);
+              setMyPurchasesQuery('');
+            }}
+            settings={settings}
+            sales={sales}
+            onToast={showToast}
+            initialQuery={myPurchasesQuery}
           />
         )}
       </Suspense>

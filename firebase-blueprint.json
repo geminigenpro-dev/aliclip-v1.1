@@ -158,6 +158,29 @@
         }
       },
       "required": ["code", "name", "document", "email", "service", "description", "request"]
+    },
+    "SaleRecord": {
+      "title": "SaleRecord",
+      "description": "Confirmed customer digital purchase and membership activation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "accessToken": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientPhone": { "type": "string" },
+        "clientEmail": { "type": "string" },
+        "productName": { "type": "string" },
+        "planName": { "type": "string" },
+        "price": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "accountType": { "type": "string" },
+        "durationText": { "type": "string" },
+        "activationDate": { "type": "string" },
+        "expirationDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["activa", "por_vencer", "vencida"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "clientName", "productName", "price", "status"]
     }
   },
   "firestore": {
@@ -178,6 +201,12 @@
         "$ref": "#/entities/Claim"
       },
       "description": "Registered Indecopi consumer complaints"
+    },
+    "/sales/{saleId}": {
+      "schema": {
+        "$ref": "#/entities/SaleRecord"
+      },
+      "description": "Registered sales records and client activations"
     }
   }
 }

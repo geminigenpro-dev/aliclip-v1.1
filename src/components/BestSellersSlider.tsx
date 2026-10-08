@@ -378,49 +378,6 @@ export const BestSellersSlider: React.FC<BestSellersSliderProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Thumbnail Preview Strip (Quick click items) */}
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-          {bestSellers.map((item, idx) => {
-            const isActive = idx === currentIndex;
-            const primaryPlan = (item.plans && item.plans[0]) || {
-              name: 'Estándar',
-              price: 'S/ 25.00',
-            };
-
-            return (
-              <div
-                key={item.id}
-                onClick={() => handleBannerClick(item)}
-                className={`p-2 rounded-xl border text-left cursor-pointer transition-all duration-300 select-none flex items-center gap-2 backdrop-blur-md ${
-                  isActive
-                    ? 'bg-purple-500/15 border-purple-500/70 shadow-[0_0_12px_rgba(168,85,247,0.3)] ring-1 ring-purple-400/50'
-                    : 'bg-white/50 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800/80 hover:border-purple-300 dark:hover:border-purple-800'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full h-full object-contain p-1"
-                    />
-                  ) : (
-                    renderIcon(item.icon)
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
-                    {item.name}
-                  </div>
-                  <div className="text-[9.5px] font-extrabold text-purple-600 dark:text-purple-400">
-                    {primaryPlan.price}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </section>
   );

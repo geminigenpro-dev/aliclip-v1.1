@@ -43,11 +43,21 @@ export interface Product {
   resourceDownloadUrl?: string; // Enlace directo a Google Drive / Descarga
 }
 
+export interface ServiceCredentials {
+  email?: string;
+  password?: string;
+  pin?: string;
+  profileName?: string;
+  driveLink?: string;
+  instructions?: string;
+}
+
 export interface SaleRecord {
   id: string;
   clientName: string;
   clientPhone: string;
   clientEmail?: string;
+  accessToken?: string; // Token único o código de pedido (ej: ALI-X784 o TK-1001)
   productId: string;
   productName: string;
   planName: string;
@@ -55,10 +65,12 @@ export interface SaleRecord {
   paymentMethod: string;
   accountType: string;
   durationText: string;
+  durationMonths?: number;
   activationDate: string; // YYYY-MM-DD
   expirationDate: string; // YYYY-MM-DD
   status: 'activa' | 'por_vencer' | 'vencida';
   notes?: string;
+  serviceCredentials?: ServiceCredentials;
   createdAt: string;
 }
 
@@ -84,6 +96,36 @@ export interface BenefitsTickerItemSetting {
 export interface FaqItemSetting {
   question: string;
   answer: string;
+}
+
+export interface AdminSectionConfig {
+  id: string; // 'products' | 'courses' | 'resources' | 'sales_history' | 'sales' | 'payments' | 'brand' | 'texts' | 'claims' | 'cloud' | 'security'
+  label: string;
+  shortLabel?: string;
+  subtitle?: string;
+  icon: string;
+  group: 'GESTIÓN COMERCIAL' | 'PERSONALIZACIÓN' | 'INFRAESTRUCTURA & ACCESO';
+  enabled: boolean;
+  showInStore?: boolean;
+  order: number;
+}
+
+export interface StoreCategoryConfig {
+  id: 'ai' | 'streaming' | 'courses' | 'resources';
+  label: string;
+  subtitle?: string;
+  icon: string;
+  enabled: boolean;
+  order: number;
+}
+
+export interface StorefrontSectionConfig {
+  id: 'heroCarousel' | 'benefitsTicker' | 'catalog' | 'reviews' | 'payments' | 'purchaseProcess' | 'faq' | 'claims';
+  label: string;
+  subtitle?: string;
+  icon: string;
+  enabled: boolean;
+  order: number;
 }
 
 export interface StoreSettings {
@@ -214,6 +256,27 @@ export interface StoreSettings {
   termsModalSubtitle?: string;
   termsCommitmentTitle?: string;
   termsCommitmentText?: string;
+
+  // 11. Gestión Dinámica de Secciones & Navegación
+  adminSections?: AdminSectionConfig[];
+  storeCategories?: StoreCategoryConfig[];
+  storefrontSections?: StorefrontSectionConfig[];
+
+  // 12. Facturación & Comprobantes Digitales Personalizables
+  invoiceBusinessName?: string; // Nombre Comercial / Razón Social
+  invoiceTaxId?: string; // RUC / NIT / RFC / CIF
+  invoiceAddress?: string; // Dirección fiscal o comercial
+  invoiceContactEmail?: string; // Correo de contacto en comprobante
+  invoiceContactPhone?: string; // Teléfono / WhatsApp en comprobante
+  invoicePrefix?: string; // Prefijo o Serie (ej: B001, CP-2026, TK)
+  invoiceTitle?: string; // Título del comprobante (ej: "COMPROBANTE DE PAGO DIGITAL")
+  invoiceTemplateStyle?: 'modern_neon' | 'corporate_clean' | 'ticket_thermal' | 'official_qr';
+  invoiceLogoBase64?: string; // Logo exclusivo para comprobantes
+  invoiceStampText?: string; // Texto del sello de garantía oficial
+  invoiceHeaderMessage?: string; // Mensaje de bienvenida / agradecimiento
+  invoiceFooterTerms?: string; // Términos al pie del comprobante
+  invoiceShowQr?: boolean; // Mostrar QR de verificación
+  invoicePrimaryColor?: string; // Color de acento de la factura
 
   updatedAt?: string;
 }

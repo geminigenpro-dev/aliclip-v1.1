@@ -37,6 +37,12 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Sales and membership tracking
+    match /sales/{saleId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Default deny catch-all
     match /{document=**} {
       allow read, write: if false;

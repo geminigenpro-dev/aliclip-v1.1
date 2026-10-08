@@ -551,54 +551,6 @@ export const Hero: React.FC<HeroProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Integrated Quick-Click Best Sellers Strip across the Bottom of Hero */}
-        {bestSellers.length > 0 && (
-          <div className="pt-1">
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-              {bestSellers.map((item, idx) => {
-                const isActive = idx === currentIndex;
-                const plan = (item.plans && item.plans[0]) || { price: 'S/ 25.00' };
-
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => handleBannerClick(item)}
-                    className={`p-2 rounded-xl border text-left cursor-pointer transition-all duration-300 select-none flex items-center gap-2 backdrop-blur-md ${
-                      isActive
-                        ? 'bg-purple-500/20 border-purple-500/80 shadow-[0_0_15px_rgba(168,85,247,0.35)] ring-1 ring-purple-400/50'
-                        : 'bg-white/5 border-purple-900/30 hover:border-purple-500/50 hover:bg-purple-950/30'
-                    }`}
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-slate-900/80 flex items-center justify-center shrink-0">
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          width={28}
-                          height={28}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-contain p-0.5"
-                        />
-                      ) : (
-                        renderIcon(item.icon)
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[10.5px] font-black text-white truncate">
-                        {item.name}
-                      </div>
-                      <div className="text-[9.5px] font-extrabold text-purple-300">
-                        {plan.price}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     </section>
   );

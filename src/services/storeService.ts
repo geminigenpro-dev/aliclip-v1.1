@@ -11,7 +11,18 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Product, StoreSettings, Claim, PaymentMethod, SaleRecord, BenefitsTickerItemSetting, FaqItemSetting } from '../types';
+import {
+  Product,
+  StoreSettings,
+  Claim,
+  PaymentMethod,
+  SaleRecord,
+  BenefitsTickerItemSetting,
+  FaqItemSetting,
+  AdminSectionConfig,
+  StoreCategoryConfig,
+  StorefrontSectionConfig,
+} from '../types';
 import { resizeAndCompressImageToBase64, isSafeFirestoreImageSize } from '../utils/imageCompressor';
 
 export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
@@ -438,6 +449,268 @@ export const DEFAULT_FAQ_ITEMS: FaqItemSetting[] = [
   },
 ];
 
+export const DEFAULT_ADMIN_SECTIONS: AdminSectionConfig[] = [
+  {
+    id: 'products',
+    label: 'Membresías & Cuentas',
+    shortLabel: 'Membresías',
+    subtitle: 'Cuentas Streaming & IA',
+    icon: 'Package',
+    group: 'GESTIÓN COMERCIAL',
+    enabled: true,
+    showInStore: true,
+    order: 1,
+  },
+  {
+    id: 'courses',
+    label: 'Gestor de Cursos',
+    shortLabel: 'Cursos',
+    subtitle: 'Cursos y masterclasses',
+    icon: 'GraduationCap',
+    group: 'GESTIÓN COMERCIAL',
+    enabled: true,
+    showInStore: true,
+    order: 2,
+  },
+  {
+    id: 'resources',
+    label: 'Gestor de Recursos',
+    shortLabel: 'Recursos',
+    subtitle: 'Packs y plantillas',
+    icon: 'Layers',
+    group: 'GESTIÓN COMERCIAL',
+    enabled: true,
+    showInStore: true,
+    order: 3,
+  },
+  {
+    id: 'sales_history',
+    label: 'Historial de Ventas',
+    shortLabel: 'Historial',
+    subtitle: 'Ventas con filtros',
+    icon: 'History',
+    group: 'GESTIÓN COMERCIAL',
+    enabled: true,
+    showInStore: true,
+    order: 4,
+  },
+  {
+    id: 'sales',
+    label: 'Confirmar Venta',
+    shortLabel: 'Nueva Venta',
+    subtitle: 'Registrar y descontar stock',
+    icon: 'CheckCircle2',
+    group: 'GESTIÓN COMERCIAL',
+    enabled: true,
+    showInStore: true,
+    order: 5,
+  },
+  {
+    id: 'payments',
+    label: 'Métodos de Pago',
+    shortLabel: 'Pagos',
+    subtitle: 'Pasarelas activas',
+    icon: 'CreditCard',
+    group: 'GESTIÓN COMERCIAL',
+    enabled: true,
+    showInStore: true,
+    order: 6,
+  },
+  {
+    id: 'billing',
+    label: 'Facturación & Comprobantes',
+    shortLabel: 'Facturación',
+    subtitle: 'Personalizar estilo y datos fiscales',
+    icon: 'Receipt',
+    group: 'GESTIÓN COMERCIAL',
+    enabled: true,
+    showInStore: true,
+    order: 7,
+  },
+  {
+    id: 'brand',
+    label: 'Marca & Colores',
+    shortLabel: 'Marca',
+    subtitle: 'Logos, tipografías y estilo',
+    icon: 'Palette',
+    group: 'PERSONALIZACIÓN',
+    enabled: true,
+    showInStore: true,
+    order: 8,
+  },
+  {
+    id: 'texts',
+    label: 'Textos & Contenido Web',
+    shortLabel: 'Textos Web',
+    subtitle: 'Títulos, pasos, FAQ y footer',
+    icon: 'FileText',
+    group: 'PERSONALIZACIÓN',
+    enabled: true,
+    showInStore: true,
+    order: 9,
+  },
+  {
+    id: 'claims',
+    label: 'Libro de Reclamaciones',
+    shortLabel: 'Reclamos',
+    subtitle: 'Atención al consumidor',
+    icon: 'BookOpen',
+    group: 'PERSONALIZACIÓN',
+    enabled: true,
+    showInStore: true,
+    order: 10,
+  },
+  {
+    id: 'cloud',
+    label: 'Nube & Semilla',
+    shortLabel: 'Nube',
+    subtitle: 'Firestore y sincronización',
+    icon: 'Cloud',
+    group: 'INFRAESTRUCTURA & ACCESO',
+    enabled: true,
+    showInStore: true,
+    order: 11,
+  },
+  {
+    id: 'security',
+    label: 'Seguridad & Acceso',
+    shortLabel: 'Seguridad',
+    subtitle: 'Credenciales del admin',
+    icon: 'ShieldCheck',
+    group: 'INFRAESTRUCTURA & ACCESO',
+    enabled: true,
+    showInStore: true,
+    order: 12,
+  },
+];
+
+/**
+ * Merge saved sections with DEFAULT_ADMIN_SECTIONS so newly introduced sections
+ * like 'billing' are never hidden when loading existing Firestore data.
+ */
+export function mergeAdminSectionsWithDefaults(
+  savedSections?: AdminSectionConfig[]
+): AdminSectionConfig[] {
+  if (!Array.isArray(savedSections) || savedSections.length === 0) {
+    return [...DEFAULT_ADMIN_SECTIONS];
+  }
+  const existingMap = new Map(savedSections.map((s) => [s.id, s]));
+  const result: AdminSectionConfig[] = [...savedSections];
+
+  DEFAULT_ADMIN_SECTIONS.forEach((defSec) => {
+    if (!existingMap.has(defSec.id)) {
+      result.push({
+        ...defSec,
+        enabled: true,
+      });
+    }
+  });
+
+  return result.sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
+export const DEFAULT_STORE_CATEGORIES: StoreCategoryConfig[] = [
+  {
+    id: 'ai',
+    label: 'Inteligencia Artificial',
+    subtitle: 'ChatGPT, Claude, Midjourney',
+    icon: 'Bot',
+    enabled: true,
+    order: 1,
+  },
+  {
+    id: 'streaming',
+    label: 'Streaming & Series',
+    subtitle: 'Netflix, Disney+, Max, Prime',
+    icon: 'Film',
+    enabled: true,
+    order: 2,
+  },
+  {
+    id: 'courses',
+    label: 'Cursos & Masterclasses',
+    subtitle: 'Academias y formación digital',
+    icon: 'GraduationCap',
+    enabled: true,
+    order: 3,
+  },
+  {
+    id: 'resources',
+    label: 'Recursos & Packs Digitales',
+    subtitle: 'Plantillas Canva, Prompts, LUTs',
+    icon: 'Layers',
+    enabled: true,
+    order: 4,
+  },
+];
+
+export const DEFAULT_STOREFRONT_SECTIONS: StorefrontSectionConfig[] = [
+  {
+    id: 'heroCarousel',
+    label: '+ Vendidos en Perú',
+    subtitle: 'Carrusel interactivo de membresías top',
+    icon: 'Flame',
+    enabled: true,
+    order: 1,
+  },
+  {
+    id: 'benefitsTicker',
+    label: 'Cinta LED de Beneficios',
+    subtitle: 'Marquee de ventajas, velocidad y garantías',
+    icon: 'Zap',
+    enabled: true,
+    order: 2,
+  },
+  {
+    id: 'catalog',
+    label: 'Catálogo Principal',
+    subtitle: 'Grid interactivo de productos y buscador',
+    icon: 'Package',
+    enabled: true,
+    order: 3,
+  },
+  {
+    id: 'reviews',
+    label: 'Opiniones & Reseñas',
+    subtitle: 'Testimonios reales y valoraciones de clientes',
+    icon: 'Star',
+    enabled: true,
+    order: 4,
+  },
+  {
+    id: 'payments',
+    label: 'Métodos de Pago',
+    subtitle: 'Pasarelas digitales y transferencias',
+    icon: 'CreditCard',
+    enabled: true,
+    order: 5,
+  },
+  {
+    id: 'purchaseProcess',
+    label: 'Proceso de Compra (4 Pasos)',
+    subtitle: 'Guía paso a paso para ordenar',
+    icon: 'CheckCircle2',
+    enabled: true,
+    order: 6,
+  },
+  {
+    id: 'faq',
+    label: 'Preguntas Frecuentes',
+    subtitle: 'Respuestas a dudas comunes',
+    icon: 'HelpCircle',
+    enabled: true,
+    order: 7,
+  },
+  {
+    id: 'claims',
+    label: 'Libro de Reclamaciones',
+    subtitle: 'Acceso regulatorio a reclamos',
+    icon: 'BookOpen',
+    enabled: true,
+    order: 8,
+  },
+];
+
 export const DEFAULT_SETTINGS: StoreSettings = {
   name: 'Ali',
   suffix: 'clip',
@@ -568,6 +841,27 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   termsCommitmentTitle: 'Compromiso de Garantía Total AliClip',
   termsCommitmentText:
     'Todas las cuentas y perfiles adquiridos cuentan con garantía ininterrumpida por el periodo exacto contratado (30 días para planes mensuales o 90 días para planes trimestrales). Ante cualquier eventualidad técnica, nuestro soporte responderá de inmediato.',
+
+  // 11. Gestión Dinámica de Secciones & Navegación
+  adminSections: DEFAULT_ADMIN_SECTIONS,
+  storeCategories: DEFAULT_STORE_CATEGORIES,
+  storefrontSections: DEFAULT_STOREFRONT_SECTIONS,
+
+  // 12. Facturación & Comprobantes Digitales
+  invoiceBusinessName: 'AliClip Digital Services S.A.C.',
+  invoiceTaxId: '20608945123',
+  invoiceAddress: 'Av. Javier Prado Este 4200, Santiago de Surco, Lima - Perú',
+  invoiceContactEmail: 'facturacion@alixperu.com',
+  invoiceContactPhone: '+51 987 654 321',
+  invoicePrefix: 'B001',
+  invoiceTitle: 'COMPROBANTE DE PAGO DIGITAL',
+  invoiceTemplateStyle: 'modern_neon',
+  invoiceLogoBase64: '',
+  invoiceStampText: 'GARANTÍA TOTAL 100% ACTIVA • AUTORIZADO ALICLIP',
+  invoiceHeaderMessage: '¡Gracias por tu compra! Tu membresía ha sido activada con garantía y respaldo técnico.',
+  invoiceFooterTerms: 'Este comprobante digital garantiza el reemplazo inmediato de cuentas durante todo el periodo contratado. Atención y reclamos disponibles 24/7.',
+  invoiceShowQr: true,
+  invoicePrimaryColor: '#6366f1',
 };
 
 const PRODUCTS_COLLECTION = 'products';
@@ -638,6 +932,28 @@ export function subscribeToSettings(
           ? data.paymentMethods
           : DEFAULT_PAYMENT_METHODS;
 
+        const adminSections = mergeAdminSectionsWithDefaults(data.adminSections);
+
+        // Auto-upgrade in Firestore if 'billing' section was not present
+        if (
+          Array.isArray(data.adminSections) &&
+          !data.adminSections.some((s: any) => s.id === 'billing')
+        ) {
+          saveSettingsToFirestore({
+            ...DEFAULT_SETTINGS,
+            ...data,
+            adminSections,
+          }).catch((err) => console.warn('Auto-upgrade billing section in Firestore:', err));
+        }
+
+        const storeCategories = Array.isArray(data.storeCategories) && data.storeCategories.length > 0
+          ? data.storeCategories
+          : DEFAULT_STORE_CATEGORIES;
+
+        const storefrontSections = Array.isArray(data.storefrontSections) && data.storefrontSections.length > 0
+          ? data.storefrontSections
+          : DEFAULT_STOREFRONT_SECTIONS;
+
         // Auto-upgrade legacy brand name if stored as 'Alix'/'play' in existing Firestore document
         const rawName = data.name;
         const rawSuffix = data.suffix;
@@ -651,6 +967,9 @@ export function subscribeToSettings(
           name,
           suffix,
           paymentMethods,
+          adminSections,
+          storeCategories,
+          storefrontSections,
         });
       } else {
         // Doc not yet created, return defaults
@@ -943,6 +1262,7 @@ export async function submitClaimToFirestore(claim: Omit<Claim, 'id' | 'createdA
 export const INITIAL_SALES: SaleRecord[] = [
   {
     id: 'sale_1',
+    accessToken: 'ALI-701',
     clientName: 'Renzo Silva',
     clientPhone: '+51 987 654 321',
     clientEmail: 'renzo.silva@gmail.com',
@@ -957,10 +1277,17 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Activación inmediata por WhatsApp.',
+    serviceCredentials: {
+      email: 'renzo.vip@alixperu.com',
+      pin: '4821',
+      profileName: 'Perfil Renzo VIP',
+      instructions: 'Ingresar con el correo indicado en ChatGPT y seleccionar tu perfil exclusivo con PIN.',
+    },
     createdAt: new Date().toISOString(),
   },
   {
     id: 'sale_2',
+    accessToken: 'ALI-702',
     clientName: 'Camila Ramos',
     clientPhone: '+51 912 345 678',
     clientEmail: 'camila.ramos@hotmail.com',
@@ -975,10 +1302,17 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 87 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Cliente frecuente, pantalla 3.',
+    serviceCredentials: {
+      email: 'netflix.fam49@alixstream.com',
+      pin: '1092',
+      profileName: 'Pantalla 3 - Camila',
+      instructions: 'Usar perfil 3 con PIN 1092. Válido en TV, Smartphone o Laptop sin caídas.',
+    },
     createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'sale_3',
+    accessToken: 'ALI-703',
     clientName: 'Diego Mendoza',
     clientPhone: '+51 976 123 456',
     clientEmail: 'diego.dev@gmail.com',
@@ -993,10 +1327,15 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Vence en 3 días
     status: 'por_vencer',
     notes: 'Programador front-end, recordarle renovación.',
+    serviceCredentials: {
+      email: 'diego.mendoza.pro@gmail.com',
+      instructions: 'Cuenta activada a tu correo personal de Claude.ai. Renovación automática disponible.',
+    },
     createdAt: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'sale_4',
+    accessToken: 'ALI-704',
     clientName: 'Lucía Fernández',
     clientPhone: '+51 998 765 432',
     clientEmail: 'lucia.design@outlook.com',
@@ -1011,10 +1350,15 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 350 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Activada a su correo personal.',
+    serviceCredentials: {
+      email: 'lucia.design@outlook.com',
+      instructions: 'Invitación a equipo Canva Pro aceptada. Acceso a Brand Kit y exportación en alta calidad.',
+    },
     createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'sale_5',
+    accessToken: 'ALI-705',
     clientName: 'Carlos Vásquez',
     clientPhone: '+51 945 888 777',
     clientEmail: 'carlos.v@gmail.com',
@@ -1029,10 +1373,16 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Vencida
     status: 'vencida',
     notes: 'Enviado recordatorio para nueva recarga.',
+    serviceCredentials: {
+      email: 'disney.premium98@alixperu.com',
+      profileName: 'Perfil Carlos',
+      instructions: 'Suscripción mensual vencida. Puedes reactivar el mismo perfil desde WhatsApp.',
+    },
     createdAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'sale_6',
+    accessToken: 'ALI-706',
     clientName: 'Mariana Flores',
     clientPhone: '+51 933 221 144',
     clientEmail: 'mariana.art@gmail.com',
@@ -1047,10 +1397,15 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Activada en Discord personal.',
+    serviceCredentials: {
+      email: 'mariana.art@gmail.com',
+      instructions: 'Bot de Midjourney añadido a tu servidor privado de Discord. Horas Fast listas para usar.',
+    },
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'sale_7',
+    accessToken: 'ALI-707',
     clientName: 'Jorge Romero',
     clientPhone: '+51 955 443 322',
     clientEmail: 'jorge.romero@gmail.com',
@@ -1065,10 +1420,17 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 84 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Uso intensivo para tesis de ingeniería.',
+    serviceCredentials: {
+      email: 'jorge.tesis@alixai.net',
+      pin: '7721',
+      profileName: 'Perfil Jorge',
+      instructions: 'Acceso completo con GPT-4o, Canvas y generación ilimitada.',
+    },
     createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'sale_8',
+    accessToken: 'ALI-708',
     clientName: 'Valeria Quispe',
     clientPhone: '+51 988 776 655',
     clientEmail: 'valeria.q@gmail.com',
@@ -1083,10 +1445,17 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 29 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Smart TV Samsung salón principal.',
+    serviceCredentials: {
+      email: 'netflix.peru24@alixstream.com',
+      pin: '3399',
+      profileName: 'Pantalla 4 - Vale',
+      instructions: 'Perfil 4 con PIN 3399. Calidad 4K UHD garantizada.',
+    },
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'sale_9',
+    accessToken: 'ALI-709',
     clientName: 'Andrés Morales',
     clientPhone: '+51 922 110 099',
     clientEmail: 'andres.musica@gmail.com',
@@ -1101,10 +1470,15 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 82 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Plan familiar compartido con su correo.',
+    serviceCredentials: {
+      email: 'andres.musica@gmail.com',
+      instructions: 'Vinculado a tu cuenta de Spotify mediante invitación familiar permanente.',
+    },
     createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'sale_10',
+    accessToken: 'ALI-710',
     clientName: 'Sandra Huamán',
     clientPhone: '+51 966 332 211',
     clientEmail: 'sandra.h@gmail.com',
@@ -1119,9 +1493,75 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 26 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Kit de marca y fuentes Pro activas.',
+    serviceCredentials: {
+      email: 'sandra.h@gmail.com',
+      instructions: 'Canva Pro activado para tu correo de diseñador.',
+    },
     createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
+
+const LOCAL_DELETED_SALES_KEY = 'aliclip_deleted_sales_ids';
+
+export function getDeletedSaleIds(): string[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_DELETED_SALES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function markSaleAsDeleted(saleId: string): void {
+  try {
+    const deleted = getDeletedSaleIds();
+    if (!deleted.includes(saleId)) {
+      deleted.push(saleId);
+      localStorage.setItem(LOCAL_DELETED_SALES_KEY, JSON.stringify(deleted));
+    }
+  } catch (err) {
+    console.warn('Could not save deleted sale id locally:', err);
+  }
+}
+
+/**
+ * SEED FUNCTION: Seeds initial sample sales into Firestore
+ */
+export async function seedSalesCollection(force = false): Promise<{ count: number; message: string }> {
+  const colRef = collection(db, SALES_COLLECTION);
+  try {
+    const existing = await getDocs(colRef);
+    if (!force && !existing.empty) {
+      return {
+        count: existing.size,
+        message: `La colección de ventas ya contiene ${existing.size} registros.`,
+      };
+    }
+
+    const batch = writeBatch(db);
+    const deletedIds = new Set(getDeletedSaleIds());
+    INITIAL_SALES.forEach((sale) => {
+      if (!deletedIds.has(sale.id)) {
+        const docRef = doc(db, SALES_COLLECTION, sale.id);
+        batch.set(docRef, removeUndefinedFields(sale));
+      }
+    });
+
+    await batch.commit();
+    localStorage.setItem('aliclip_sales_seeded', 'true');
+    return {
+      count: INITIAL_SALES.length,
+      message: `¡Colección 'sales' inicializada con ${INITIAL_SALES.length} ventas!`,
+    };
+  } catch (error) {
+    try {
+      handleFirestoreError(error, OperationType.WRITE, SALES_COLLECTION);
+    } catch {
+      // ignore
+    }
+    throw error;
+  }
+}
 
 /**
  * Real-time listener for the sales records
@@ -1134,26 +1574,46 @@ export function subscribeToSales(
   return onSnapshot(
     colRef,
     (snapshot) => {
+      const deletedIds = new Set(getDeletedSaleIds());
       const items: SaleRecord[] = [];
       snapshot.forEach((docSnap) => {
-        items.push({ id: docSnap.id, ...(docSnap.data() as Omit<SaleRecord, 'id'>) });
+        if (!deletedIds.has(docSnap.id)) {
+          items.push({ id: docSnap.id, ...(docSnap.data() as Omit<SaleRecord, 'id'>) });
+        }
       });
 
       // Sort by creation date descending (newest first)
       items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      if (items.length === 0) {
-        onUpdate(INITIAL_SALES);
+      const wasSeeded = localStorage.getItem('aliclip_sales_seeded') === 'true';
+      if (snapshot.empty && !wasSeeded) {
+        // Auto-seed in Firestore in background so docs exist
+        seedSalesCollection(false).catch(() => {});
+        const fallback = INITIAL_SALES.filter((s) => !deletedIds.has(s.id));
+        onUpdate(fallback);
       } else {
         onUpdate(items);
       }
     },
     (error) => {
       console.warn('Firestore sales subscription offline or permission issue, using initial sales:', error);
-      onUpdate(INITIAL_SALES);
+      const deletedIds = new Set(getDeletedSaleIds());
+      const fallback = INITIAL_SALES.filter((s) => !deletedIds.has(s.id));
+      onUpdate(fallback);
       if (onError) onError(error);
     }
   );
+}
+
+/**
+ * Generate human-friendly token for membership lookup
+ */
+export function generateSaleToken(): string {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const l1 = letters[Math.floor(Math.random() * letters.length)];
+  const l2 = letters[Math.floor(Math.random() * letters.length)];
+  const num = Math.floor(100 + Math.random() * 900);
+  return `ALI-${l1}${l2}${num}`;
 }
 
 /**
@@ -1164,9 +1624,11 @@ export async function createSaleRecord(
   decreaseStock = true
 ): Promise<SaleRecord> {
   const id = `sale_${Date.now()}`;
+  const accessToken = saleData.accessToken || generateSaleToken();
   const docRef = doc(db, SALES_COLLECTION, id);
   const fullSale: SaleRecord = removeUndefinedFields({
     ...saleData,
+    accessToken,
     id,
     createdAt: new Date().toISOString(),
   });
@@ -1186,6 +1648,100 @@ export async function createSaleRecord(
     handleFirestoreError(error, OperationType.CREATE, `${SALES_COLLECTION}/${id}`);
     throw error;
   }
+}
+
+/**
+ * Helper to search customer purchases by email, token, or phone number
+ */
+export function queryCustomerPurchases(
+  searchQuery: string,
+  salesPool: SaleRecord[] = INITIAL_SALES
+): {
+  matchedType: 'email' | 'token' | 'phone' | 'none';
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  records: SaleRecord[];
+} {
+  const rawQuery = searchQuery.trim().toLowerCase();
+  if (!rawQuery) {
+    return { matchedType: 'none', records: [] };
+  }
+
+  // 1. Check exact or prefix match by token / ID
+  const normalizedQuery = rawQuery.replace(/[^a-z0-9_-]/g, '');
+  const byToken = salesPool.filter((s) => {
+    const sId = s.id.toLowerCase();
+    const sToken = (s.accessToken || '').toLowerCase();
+    return sId === rawQuery || sToken === rawQuery || sToken.replace(/[^a-z0-9]/g, '') === normalizedQuery;
+  });
+
+  if (byToken.length > 0) {
+    // If found by token, also include any other sales by that same email or phone to show their full history!
+    const primary = byToken[0];
+    const customerRecords = salesPool.filter((s) => {
+      if (s.id === primary.id || (s.accessToken && s.accessToken === primary.accessToken)) return true;
+      if (primary.clientEmail && s.clientEmail && s.clientEmail.toLowerCase() === primary.clientEmail.toLowerCase()) return true;
+      if (primary.clientPhone && s.clientPhone && s.clientPhone.replace(/[^0-9]/g, '') === primary.clientPhone.replace(/[^0-9]/g, '')) return true;
+      return false;
+    });
+
+    return {
+      matchedType: 'token',
+      clientName: primary.clientName,
+      clientEmail: primary.clientEmail,
+      clientPhone: primary.clientPhone,
+      records: customerRecords.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    };
+  }
+
+  // 2. Check match by email (exact or includes if valid email pattern)
+  const isEmailPattern = rawQuery.includes('@');
+  if (isEmailPattern) {
+    const byEmail = salesPool.filter((s) => (s.clientEmail || '').toLowerCase().trim() === rawQuery);
+    if (byEmail.length > 0) {
+      return {
+        matchedType: 'email',
+        clientName: byEmail[0].clientName,
+        clientEmail: byEmail[0].clientEmail,
+        clientPhone: byEmail[0].clientPhone,
+        records: byEmail.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+      };
+    }
+  }
+
+  // 3. Check match by phone (cleaned digits)
+  const queryDigits = rawQuery.replace(/[^0-9]/g, '');
+  if (queryDigits.length >= 7) {
+    const byPhone = salesPool.filter((s) => {
+      const sDigits = s.clientPhone.replace(/[^0-9]/g, '');
+      return sDigits.endsWith(queryDigits) || queryDigits.endsWith(sDigits) || sDigits.includes(queryDigits);
+    });
+
+    if (byPhone.length > 0) {
+      return {
+        matchedType: 'phone',
+        clientName: byPhone[0].clientName,
+        clientEmail: byPhone[0].clientEmail,
+        clientPhone: byPhone[0].clientPhone,
+        records: byPhone.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+      };
+    }
+  }
+
+  // 4. Broader substring search across email
+  const byFuzzyEmail = salesPool.filter((s) => (s.clientEmail || '').toLowerCase().includes(rawQuery));
+  if (byFuzzyEmail.length > 0) {
+    return {
+      matchedType: 'email',
+      clientName: byFuzzyEmail[0].clientName,
+      clientEmail: byFuzzyEmail[0].clientEmail,
+      clientPhone: byFuzzyEmail[0].clientPhone,
+      records: byFuzzyEmail.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    };
+  }
+
+  return { matchedType: 'none', records: [] };
 }
 
 /**
@@ -1234,12 +1790,20 @@ export async function updateSaleStatus(
  * Deletes a sale record
  */
 export async function deleteSaleRecord(saleId: string): Promise<void> {
+  // 1. Immediately record locally so this record never reappears
+  markSaleAsDeleted(saleId);
+
+  // 2. Delete document in Firestore
   const docRef = doc(db, SALES_COLLECTION, saleId);
   try {
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `${SALES_COLLECTION}/${saleId}`);
-    throw error;
+    console.warn('Firestore sale deletion error, preserved local deletion:', error);
+    try {
+      handleFirestoreError(error, OperationType.DELETE, `${SALES_COLLECTION}/${saleId}`);
+    } catch {
+      // ignore
+    }
   }
 }
 

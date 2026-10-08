@@ -16,6 +16,7 @@ import {
   Menu,
   GraduationCap,
   Layers,
+  ShoppingBag,
 } from 'lucide-react';
 import { StoreSettings } from '../types';
 
@@ -28,6 +29,7 @@ interface NavbarProps {
   onOpenAdmin: () => void;
   onLogoutAdmin: () => void;
   onOpenTerms: () => void;
+  onOpenMyPurchases?: () => void;
   onBrandClick: () => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
@@ -43,6 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAdmin,
   onLogoutAdmin,
   onOpenTerms,
+  onOpenMyPurchases,
   onBrandClick,
   theme = 'light',
   onToggleTheme,
@@ -53,6 +56,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   const waUrl = `https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent(
     `Hola ${settings.name}${settings.suffix}, deseo consultar por una membresía`
   )}`;
+
+  const isCategoryEnabled = (catId: string) => {
+    if (!settings.storeCategories) return true;
+    const cat = settings.storeCategories.find((c) => c.id === catId);
+    return cat ? cat.enabled !== false : true;
+  };
+
+  const isSectionEnabled = (secId: string) => {
+    if (!settings.storefrontSections) return true;
+    const sec = settings.storefrontSections.find((s) => s.id === secId);
+    return sec ? sec.enabled !== false : true;
+  };
+
+  const coursesLabel = settings.storeCategories?.find((c) => c.id === 'courses')?.label || settings.categoryTabCourses || 'Cursos';
+  const resourcesLabel = settings.storeCategories?.find((c) => c.id === 'resources')?.label || settings.categoryTabResources || 'Recursos';
 
   return (
     <>
@@ -177,58 +195,68 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Dynamic Compact Navigation Dock (Desktop) */}
             <nav className="hidden lg:flex items-center p-1 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 backdrop-blur-md shadow-2xs">
-              <a
-                href="#mas-vendidos"
-                className="px-2.5 py-1.5 rounded-xl text-xs font-black text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
-              >
-                <Flame className="w-3.5 h-3.5 text-rose-500 fill-rose-500 animate-pulse" />
-                <span>+ Vendidos</span>
-              </a>
+              {isSectionEnabled('heroCarousel') && (
+                <a
+                  href="#mas-vendidos"
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-black text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                >
+                  <Flame className="w-3.5 h-3.5 text-rose-500 fill-rose-500 animate-pulse" />
+                  <span>+ Vendidos</span>
+                </a>
+              )}
 
-              <a
-                href="#catalogo"
-                onClick={() => onSelectCategory?.('all')}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
-              >
-                <Grid className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Catálogo</span>
-              </a>
+              {isSectionEnabled('catalog') && (
+                <a
+                  href="#catalogo"
+                  onClick={() => onSelectCategory?.('all')}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                >
+                  <Grid className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Catálogo</span>
+                </a>
+              )}
 
-              <a
-                href="#cursos"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onSelectCategory?.('courses');
-                  const el = document.getElementById('cursos') || document.getElementById('catalogo');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
-              >
-                <GraduationCap className="w-3.5 h-3.5 text-amber-500" />
-                <span>Cursos</span>
-              </a>
+              {isCategoryEnabled('courses') && (
+                <a
+                  href="#cursos"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectCategory?.('courses');
+                    const el = document.getElementById('cursos') || document.getElementById('catalogo');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                >
+                  <GraduationCap className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{coursesLabel}</span>
+                </a>
+              )}
 
-              <a
-                href="#recursos"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onSelectCategory?.('resources');
-                  const el = document.getElementById('recursos') || document.getElementById('catalogo');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
-              >
-                <Layers className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Recursos</span>
-              </a>
+              {isCategoryEnabled('resources') && (
+                <a
+                  href="#recursos"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectCategory?.('resources');
+                    const el = document.getElementById('recursos') || document.getElementById('catalogo');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                >
+                  <Layers className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>{resourcesLabel}</span>
+                </a>
+              )}
 
-              <a
-                href="#pagos"
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
-              >
-                <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Pagos</span>
-              </a>
+              {isSectionEnabled('payments') && (
+                <a
+                  href="#pagos"
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Pagos</span>
+                </a>
+              )}
 
               <button
                 type="button"
@@ -239,17 +267,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Garantía</span>
               </button>
 
-              <a
-                href="#faq"
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
-              >
-                <HelpCircle className="w-3.5 h-3.5 text-sky-500" />
-                <span>FAQ</span>
-              </a>
+              {isSectionEnabled('faq') && (
+                <a
+                  href="#faq"
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-slate-700/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-sky-500" />
+                  <span>FAQ</span>
+                </a>
+              )}
             </nav>
 
             {/* Actions */}
             <div className="flex items-center gap-1.5 sm:gap-2">
+              {/* Mis Compras Desktop Button */}
+              {onOpenMyPurchases && (
+                <button
+                  type="button"
+                  onClick={onOpenMyPurchases}
+                  className="hidden sm:inline-flex px-3 py-1.5 rounded-xl text-xs font-black text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-200 bg-indigo-50/90 hover:bg-indigo-100/90 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/70 border border-indigo-200/90 dark:border-indigo-800/80 transition-all items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                  title="Consultar historial de compras, membresías y cuentas"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>Mis Compras</span>
+                </button>
+              )}
+
               {/* Dark Mode Theme Toggle Button */}
               {onToggleTheme && (
                 <button
@@ -361,90 +404,126 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* Grid of Navigation Items */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <a
-                  href="#mas-vendidos"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 p-2.5 rounded-xl border border-rose-200/80 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/40 hover:bg-rose-100/80 dark:hover:bg-rose-900/50 transition-all group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Flame className="w-4 h-4 fill-rose-500 animate-pulse" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-black text-rose-700 dark:text-rose-300">+ Vendidos VIP</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Las membresías top en demanda</div>
-                  </div>
-                </a>
+                {onOpenMyPurchases && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onOpenMyPurchases();
+                    }}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-800/90 bg-indigo-50/80 dark:bg-indigo-950/50 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-all group cursor-pointer text-left sm:col-span-2 shadow-2xs"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                      <ShoppingBag className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+                        <span>Mis Compras & Membresías</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-indigo-200/60 dark:bg-indigo-800/60 text-indigo-800 dark:text-indigo-200 font-bold">
+                          Portal Clientes
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                        Ver cuentas activas, días restantes, credenciales y comprobantes
+                      </div>
+                    </div>
+                  </button>
+                )}
 
-                <a
-                  href="#catalogo"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onSelectCategory?.('all');
-                  }}
-                  className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 hover:bg-indigo-50/80 dark:hover:bg-indigo-950/40 hover:border-indigo-200 dark:hover:border-indigo-800/80 transition-all group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Grid className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">Catálogo Completo</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">IA, streaming y servicios digitales</div>
-                  </div>
-                </a>
+                {isSectionEnabled('heroCarousel') && (
+                  <a
+                    href="#mas-vendidos"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-rose-200/80 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/40 hover:bg-rose-100/80 dark:hover:bg-rose-900/50 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Flame className="w-4 h-4 fill-rose-500 animate-pulse" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-rose-700 dark:text-rose-300">+ Vendidos VIP</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Las membresías top en demanda</div>
+                    </div>
+                  </a>
+                )}
 
-                <a
-                  href="#cursos"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMobileMenuOpen(false);
-                    onSelectCategory?.('courses');
-                    const el = document.getElementById('cursos') || document.getElementById('catalogo');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="flex items-center gap-3 p-2.5 rounded-xl border border-amber-200/80 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 transition-all group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <GraduationCap className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-amber-900 dark:text-amber-300">Cursos & Masterclasses</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">IA, Marketing, Edición & Vitalicios</div>
-                  </div>
-                </a>
+                {isSectionEnabled('catalog') && (
+                  <a
+                    href="#catalogo"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onSelectCategory?.('all');
+                    }}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 hover:bg-indigo-50/80 dark:hover:bg-indigo-950/40 hover:border-indigo-200 dark:hover:border-indigo-800/80 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Grid className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white">Catálogo Completo</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">IA, streaming y servicios digitales</div>
+                    </div>
+                  </a>
+                )}
 
-                <a
-                  href="#recursos"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMobileMenuOpen(false);
-                    onSelectCategory?.('resources');
-                    const el = document.getElementById('recursos') || document.getElementById('catalogo');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="flex items-center gap-3 p-2.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 transition-all group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300">Recursos & Packs</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Plantillas Canva, Prompts & Overlays</div>
-                  </div>
-                </a>
+                {isCategoryEnabled('courses') && (
+                  <a
+                    href="#cursos"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setMobileMenuOpen(false);
+                      onSelectCategory?.('courses');
+                      const el = document.getElementById('cursos') || document.getElementById('catalogo');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-amber-200/80 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <GraduationCap className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-amber-900 dark:text-amber-300">{coursesLabel}</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">IA, Marketing, Edición & Vitalicios</div>
+                    </div>
+                  </a>
+                )}
 
-                <a
-                  href="#pagos"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 hover:border-emerald-200 dark:hover:border-emerald-800/80 transition-all group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <CreditCard className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">Métodos de Pago</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Yape, Plin, Binance y bancos</div>
-                  </div>
-                </a>
+                {isCategoryEnabled('resources') && (
+                  <a
+                    href="#recursos"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setMobileMenuOpen(false);
+                      onSelectCategory?.('resources');
+                      const el = document.getElementById('recursos') || document.getElementById('catalogo');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300">{resourcesLabel}</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Plantillas Canva, Prompts & Overlays</div>
+                    </div>
+                  </a>
+                )}
+
+                {isSectionEnabled('payments') && (
+                  <a
+                    href="#pagos"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 hover:border-emerald-200 dark:hover:border-emerald-800/80 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white">Métodos de Pago</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Yape, Plin, Binance y bancos</div>
+                    </div>
+                  </a>
+                )}
 
                 <button
                   type="button"
@@ -463,19 +542,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 </button>
 
-                <a
-                  href="#faq"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 hover:bg-sky-50/80 dark:hover:bg-sky-950/40 hover:border-sky-200 dark:hover:border-sky-800/80 transition-all sm:col-span-2 group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <HelpCircle className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">Preguntas Frecuentes (FAQ)</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Dudas sobre activación, cuentas y soporte</div>
-                  </div>
-                </a>
+                {isSectionEnabled('faq') && (
+                  <a
+                    href="#faq"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 hover:bg-sky-50/80 dark:hover:bg-sky-950/40 hover:border-sky-200 dark:hover:border-sky-800/80 transition-all sm:col-span-2 group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <HelpCircle className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white">Preguntas Frecuentes (FAQ)</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Dudas sobre activación, cuentas y soporte</div>
+                    </div>
+                  </a>
+                )}
               </div>
 
               {/* Mobile Footer Links in Drawer */}
