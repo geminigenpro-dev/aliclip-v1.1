@@ -19,6 +19,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { StoreSettings } from '../types';
+import { sanitizeSearchQuery } from '../utils/securityValidator';
 
 interface NavbarProps {
   settings: StoreSettings;
@@ -174,7 +175,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
+                  onChange={(e) => onSearchChange(sanitizeSearchQuery(e.target.value))}
                   placeholder={settings.searchPlaceholder || 'Buscar servicio (ej. ChatGPT, Netflix...)'}
                   className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30 transition-all"
                 />
@@ -374,7 +375,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
+                onChange={(e) => onSearchChange(sanitizeSearchQuery(e.target.value))}
                 placeholder={settings.searchPlaceholder || 'Buscar ChatGPT, Netflix, Canva, Max...'}
                 className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30"
               />

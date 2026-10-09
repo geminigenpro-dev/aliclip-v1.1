@@ -17,6 +17,10 @@ import { Product } from '../../types';
 import { compressImage, resizeAndCompressImageToBase64 } from '../../utils/imageCompressor';
 import { uploadFileToFirebaseStorage } from '../../firebase';
 import { generateProductDescription } from '../../services/aiService';
+import {
+  validateDescriptiveText,
+  detectMaliciousPayload,
+} from '../../utils/securityValidator';
 
 interface CourseModalProps {
   isOpen: boolean;
@@ -171,6 +175,33 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    // Validación estricta del curso
+    const nameVal = validateDescriptiveText(name, { label: 'Nombre del curso', minLength: 2, maxLength: 90, required: true });
+    if (!nameVal.valid) {
+      onToast(`⚠️ ${nameVal.error}`);
+      return;
+    }
+
+    const tagVal = validateDescriptiveText(tag, { label: 'Etiqueta o nivel', maxLength: 60 });
+    if (!tagVal.valid) {
+      onToast(`⚠️ ${tagVal.error}`);
+      return;
+    }
+
+    const descVal = validateDescriptiveText(desc, { label: 'Descripción', minLength: 5, maxLength: 800 });
+    if (!descVal.valid) {
+      onToast(`⚠️ ${descVal.error}`);
+      return;
+    }
+
+    const checkList = [p1Name, p1Price, p2Name, p2Price, courseAccessUrl];
+    for (const item of checkList) {
+      if (item && detectMaliciousPayload(item).isMalicious) {
+        onToast('⚠️ Se detectaron caracteres no permitidos en los campos del curso.');
+        return;
+      }
+    }
 
     let safeImg = imageUrl.trim();
     if (safeImg.length > 500000) {

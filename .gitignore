@@ -1,3 +1,4 @@
+# Dependencias y compilación
 node_modules/
 build/
 dist/
@@ -6,5 +7,17 @@ coverage/
 *.log
 bun.lock
 bun.lockb
+
+# Variables de entorno y secretos
 .env*
 !.env.example
+*.pem
+*.key
+*.cert
+*.pfx
+*.p12
+credentials.json
+service-account*.json
+secrets/
+.vscode/
+.idea/

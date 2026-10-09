@@ -23,6 +23,13 @@ import {
 } from 'lucide-react';
 import { Product, SaleRecord } from '../../types';
 import { createSaleRecord, updateSaleStatus, deleteSaleRecord } from '../../services/storeService';
+import {
+  validateCustomerName,
+  validatePhoneNumber,
+  validateCustomerEmail,
+  validateDescriptiveText,
+  detectMaliciousPayload,
+} from '../../utils/securityValidator';
 
 interface AdminSalesTabProps {
   products: Product[];
@@ -109,13 +116,45 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
       return;
     }
 
+    // Validación estricta del nombre
+    const nameVal = validateCustomerName(clientName, 'Nombre del cliente');
+    if (!nameVal.valid) {
+      onToast(`⚠️ ${nameVal.error}`);
+      return;
+    }
+
+    // Validación estricta del teléfono
+    const phoneVal = validatePhoneNumber(clientPhone, 'Teléfono del cliente');
+    if (!phoneVal.valid) {
+      onToast(`⚠️ ${phoneVal.error}`);
+      return;
+    }
+
+    // Validación estricta de correo (si fue ingresado)
+    let safeEmail = '';
+    if (clientEmail.trim()) {
+      const emailVal = validateCustomerEmail(clientEmail, 'Correo del cliente');
+      if (!emailVal.valid) {
+        onToast(`⚠️ ${emailVal.error}`);
+        return;
+      }
+      safeEmail = emailVal.sanitized;
+    }
+
+    // Validación estricta de notas
+    const notesVal = validateDescriptiveText(notes, { label: 'Notas', maxLength: 1000 });
+    if (!notesVal.valid) {
+      onToast(`⚠️ ${notesVal.error}`);
+      return;
+    }
+
     setSavingSale(true);
     try {
       const newSale = await createSaleRecord(
         {
-          clientName: clientName.trim(),
-          clientPhone: clientPhone.trim(),
-          clientEmail: clientEmail.trim() || '',
+          clientName: nameVal.sanitized,
+          clientPhone: phoneVal.sanitized,
+          clientEmail: safeEmail,
           productId: selectedProduct?.id || 'prod_custom',
           productName: selectedProduct?.name || 'Servicio Digital',
           planName: planName.trim(),
@@ -126,7 +165,7 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
           activationDate,
           expirationDate,
           status: 'activa',
-          notes: notes.trim() || '',
+          notes: notesVal.sanitized,
         },
         autoDiscountStock
       );

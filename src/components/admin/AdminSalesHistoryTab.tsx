@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Product, SaleRecord } from '../../types';
 import { updateSaleStatus, deleteSaleRecord } from '../../services/storeService';
+import { sanitizeSearchQuery } from '../../utils/securityValidator';
 import { AdminSalesChart } from './AdminSalesChart';
 
 interface AdminSalesHistoryTabProps {
@@ -418,7 +419,7 @@ export const AdminSalesHistoryTab: React.FC<AdminSalesHistoryTabProps> = ({
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(sanitizeSearchQuery(e.target.value))}
                 placeholder="Nombre, WhatsApp o nota..."
                 className="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />

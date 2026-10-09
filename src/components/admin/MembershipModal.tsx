@@ -13,6 +13,11 @@ import { Product } from '../../types';
 import { compressImage, resizeAndCompressImageToBase64 } from '../../utils/imageCompressor';
 import { uploadFileToFirebaseStorage } from '../../firebase';
 import { generateProductDescription } from '../../services/aiService';
+import {
+  validateDescriptiveText,
+  detectMaliciousPayload,
+  sanitizeSingleLine,
+} from '../../utils/securityValidator';
 
 interface MembershipModalProps {
   isOpen: boolean;
@@ -168,6 +173,38 @@ export const MembershipModal: React.FC<MembershipModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    // Validación estricta del nombre del producto
+    const nameVal = validateDescriptiveText(name, { label: 'Nombre del servicio', minLength: 2, maxLength: 80, required: true });
+    if (!nameVal.valid) {
+      onToast(`⚠️ ${nameVal.error}`);
+      return;
+    }
+
+    // Validación de etiqueta y descripción
+    const tagVal = validateDescriptiveText(tag, { label: 'Etiqueta comercial', maxLength: 60 });
+    if (!tagVal.valid) {
+      onToast(`⚠️ ${tagVal.error}`);
+      return;
+    }
+
+    const descVal = validateDescriptiveText(desc, { label: 'Descripción', minLength: 5, maxLength: 800 });
+    if (!descVal.valid) {
+      onToast(`⚠️ ${descVal.error}`);
+      return;
+    }
+
+    // Validación de nombres y precios de planes
+    const planItems = [p1Name, p1Price, p2Name, p2Price];
+    for (const p of planItems) {
+      if (p) {
+        const check = detectMaliciousPayload(p);
+        if (check.isMalicious) {
+          onToast(`⚠️ Plan o precio rechazado: ${check.reason}`);
+          return;
+        }
+      }
+    }
 
     let safeImg = imageUrl.trim();
     if (safeImg.length > 500000) {

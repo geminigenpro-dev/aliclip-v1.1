@@ -2,6 +2,14 @@ import React, { useState } from 'react';
 import { X, BookOpen, Send } from 'lucide-react';
 import { submitClaimToFirestore } from '../services/storeService';
 import { StoreSettings } from '../types';
+import {
+  validateCustomerName,
+  validateIdentityDocument,
+  validatePhoneNumber,
+  validateCustomerEmail,
+  validateDescriptiveText,
+  detectMaliciousPayload,
+} from '../utils/securityValidator';
 
 interface ClaimsModalProps {
   settings: StoreSettings;
@@ -30,19 +38,68 @@ export const ClaimsModal: React.FC<ClaimsModalProps> = ({ settings, onClose, onT
       return;
     }
 
+    // 1. Validación estricta del nombre
+    const nameVal = validateCustomerName(name, 'Nombre completo');
+    if (!nameVal.valid) {
+      onToast(`⚠️ ${nameVal.error}`);
+      return;
+    }
+
+    // 2. Validación estricta del documento
+    const docVal = validateIdentityDocument(docNumber, 'Documento de identidad');
+    if (!docVal.valid) {
+      onToast(`⚠️ ${docVal.error}`);
+      return;
+    }
+
+    // 3. Validación estricta del teléfono
+    const phoneVal = validatePhoneNumber(phone, 'Teléfono');
+    if (!phoneVal.valid) {
+      onToast(`⚠️ ${phoneVal.error}`);
+      return;
+    }
+
+    // 4. Validación estricta del email
+    const emailVal = validateCustomerEmail(email, 'Correo electrónico');
+    if (!emailVal.valid) {
+      onToast(`⚠️ ${emailVal.error}`);
+      return;
+    }
+
+    // 5. Validación del servicio
+    const serviceVal = validateDescriptiveText(service, { label: 'Servicio contratado', minLength: 2, required: true });
+    if (!serviceVal.valid) {
+      onToast(`⚠️ ${serviceVal.error}`);
+      return;
+    }
+
+    // 6. Validación de la descripción del reclamo
+    const descVal = validateDescriptiveText(description, { label: 'Detalle del reclamo', minLength: 5, maxLength: 2000, required: true });
+    if (!descVal.valid) {
+      onToast(`⚠️ ${descVal.error}`);
+      return;
+    }
+
+    // 7. Validación del pedido
+    const reqVal = validateDescriptiveText(request, { label: 'Pedido del consumidor', minLength: 3, maxLength: 1500, required: true });
+    if (!reqVal.valid) {
+      onToast(`⚠️ ${reqVal.error}`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       await submitClaimToFirestore({
         code: correlative,
-        name,
-        document: docNumber,
-        phone,
-        email,
+        name: nameVal.sanitized,
+        document: docVal.sanitized,
+        phone: phoneVal.sanitized,
+        email: emailVal.sanitized,
         typeGood,
-        service,
+        service: serviceVal.sanitized,
         category,
-        description,
-        request,
+        description: descVal.sanitized,
+        request: reqVal.sanitized,
       });
 
       onToast(`Hoja de ${category} ${correlative} registrada con éxito`);
@@ -121,7 +178,15 @@ export const ClaimsModal: React.FC<ClaimsModalProps> = ({ settings, onClose, onT
                   type="text"
                   required
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const check = detectMaliciousPayload(val);
+                    if (check.isMalicious) {
+                      onToast(`⚠️ Nombre rechazado: ${check.reason}`);
+                      return;
+                    }
+                    setName(val);
+                  }}
                   placeholder="Tu nombre y apellidos"
                   className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
@@ -135,7 +200,15 @@ export const ClaimsModal: React.FC<ClaimsModalProps> = ({ settings, onClose, onT
                   type="text"
                   required
                   value={docNumber}
-                  onChange={(e) => setDocNumber(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const check = detectMaliciousPayload(val);
+                    if (check.isMalicious) {
+                      onToast(`⚠️ Documento rechazado: ${check.reason}`);
+                      return;
+                    }
+                    setDocNumber(val);
+                  }}
                   placeholder="N° de Documento"
                   className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
@@ -149,7 +222,15 @@ export const ClaimsModal: React.FC<ClaimsModalProps> = ({ settings, onClose, onT
                   type="tel"
                   required
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const check = detectMaliciousPayload(val);
+                    if (check.isMalicious) {
+                      onToast(`⚠️ Teléfono rechazado: ${check.reason}`);
+                      return;
+                    }
+                    setPhone(val);
+                  }}
                   placeholder="+51 900 000 000"
                   className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
@@ -163,7 +244,15 @@ export const ClaimsModal: React.FC<ClaimsModalProps> = ({ settings, onClose, onT
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const check = detectMaliciousPayload(val);
+                    if (check.isMalicious) {
+                      onToast(`⚠️ Correo rechazado: ${check.reason}`);
+                      return;
+                    }
+                    setEmail(val);
+                  }}
                   placeholder="tucorreo@ejemplo.com"
                   className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
@@ -198,7 +287,15 @@ export const ClaimsModal: React.FC<ClaimsModalProps> = ({ settings, onClose, onT
                   type="text"
                   required
                   value={service}
-                  onChange={(e) => setService(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const check = detectMaliciousPayload(val);
+                    if (check.isMalicious) {
+                      onToast(`⚠️ Servicio rechazado: ${check.reason}`);
+                      return;
+                    }
+                    setService(val);
+                  }}
                   placeholder="Nombre de la cuenta o servicio"
                   className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none"
                 />
@@ -245,7 +342,15 @@ export const ClaimsModal: React.FC<ClaimsModalProps> = ({ settings, onClose, onT
                 rows={3}
                 required
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const check = detectMaliciousPayload(val);
+                  if (check.isMalicious) {
+                    onToast(`⚠️ Descripción rechazada: ${check.reason}`);
+                    return;
+                  }
+                  setDescription(val);
+                }}
                 placeholder="Indica con detalle lo sucedido (fecha, código de pedido o incidente)..."
                 className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
@@ -259,7 +364,15 @@ export const ClaimsModal: React.FC<ClaimsModalProps> = ({ settings, onClose, onT
                 type="text"
                 required
                 value={request}
-                onChange={(e) => setRequest(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const check = detectMaliciousPayload(val);
+                  if (check.isMalicious) {
+                    onToast(`⚠️ Pedido rechazado: ${check.reason}`);
+                    return;
+                  }
+                  setRequest(val);
+                }}
                 placeholder="Ej: Reposición de credencial o revisión del plan contratado"
                 className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none"
               />

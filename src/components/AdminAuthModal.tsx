@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ShieldCheck, User, Lock } from 'lucide-react';
 import { signInWithPopup, auth, googleProvider } from '../firebase';
+import { detectMaliciousPayload } from '../utils/securityValidator';
+import { hashPassword, verifyPassword, DEFAULT_ADMIN_PASSWORD_HASH } from '../utils/cryptoAuth';
 
 interface AdminAuthModalProps {
   onClose: () => void;
@@ -14,36 +16,79 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ onClose, onSucce
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleCredentialsLogin = (e: React.FormEvent) => {
+  const handleCredentialsLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
-    const cleanUser = username.trim().toLowerCase();
-    const stored = localStorage.getItem('alixplay_local_admin');
-    const defaultEnvUser = (import.meta.env.VITE_ADMIN_DEFAULT_USER as string) || 'admin';
-    const defaultEnvPass = (import.meta.env.VITE_ADMIN_DEFAULT_PASS as string) || 'admin';
-    let validUser = defaultEnvUser.toLowerCase();
-    let validPass = defaultEnvPass;
-
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed.username) validUser = parsed.username.toLowerCase();
-        if (parsed.pass) validPass = parsed.pass;
-      } catch (err) {
-        console.error(err);
-      }
+    // Validación estricta contra inyecciones y comandos en login
+    const userCheck = detectMaliciousPayload(username);
+    if (userCheck.isMalicious) {
+      setErrorMsg(`Acceso rechazado: ${userCheck.reason}`);
+      return;
+    }
+    const passCheck = detectMaliciousPayload(password);
+    if (passCheck.isMalicious) {
+      setErrorMsg(`Acceso rechazado: ${passCheck.reason}`);
+      return;
     }
 
-    if (
-      cleanUser === validUser &&
-      (password === validPass || (defaultEnvPass && password === defaultEnvPass))
-    ) {
-      onSuccess(username.trim());
-      onToast(`¡Sesión iniciada como administrador (${username})!`);
-      onClose();
-    } else {
-      setErrorMsg(`Usuario o contraseña incorrectos. Verifica tus credenciales de acceso.`);
+    setLoading(true);
+
+    try {
+      // 1. Forzar Autenticación del Lado del Servidor
+      const serverRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password: password.trim() }),
+      });
+
+      if (serverRes.ok) {
+        const data = await serverRes.json();
+        if (data.token) {
+          localStorage.setItem('alixplay_admin_session_token', data.token);
+          onSuccess(username.trim());
+          onToast(`¡Sesión iniciada como administrador autenticado en servidor (${username})!`);
+          onClose();
+          return;
+        }
+      }
+
+      // 2. Fallback de verificación local mediante Hash Criptográfico Seguro (SHA-256)
+      const cleanUser = username.trim().toLowerCase();
+      const stored = localStorage.getItem('alixplay_local_admin');
+      const defaultEnvUser = (import.meta.env.VITE_ADMIN_DEFAULT_USER as string) || 'admin';
+      let validUser = defaultEnvUser.toLowerCase();
+      let storedHash = DEFAULT_ADMIN_PASSWORD_HASH;
+
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.username) validUser = parsed.username.toLowerCase();
+          if (parsed.passHash) {
+            storedHash = parsed.passHash;
+          } else if (parsed.pass) {
+            // Migrar contraseña en texto plano anterior a hash criptográfico
+            storedHash = await hashPassword(parsed.pass);
+            localStorage.setItem('alixplay_local_admin', JSON.stringify({ username: validUser, passHash: storedHash }));
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      const isPassValid = await verifyPassword(password, storedHash);
+      if (cleanUser === validUser && isPassValid) {
+        onSuccess(username.trim());
+        onToast(`¡Sesión iniciada como administrador (${username})!`);
+        onClose();
+        return;
+      }
+
+      setErrorMsg('Usuario o contraseña incorrectos. Verifica tus credenciales de acceso.');
+    } catch {
+      setErrorMsg('Error de conexión al servidor de autenticación.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -120,7 +165,14 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ onClose, onSucce
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (detectMaliciousPayload(val).isMalicious) {
+                    setErrorMsg('Caracteres no permitidos en el usuario.');
+                    return;
+                  }
+                  setUsername(val);
+                }}
                 placeholder="Usuario (ej. admin)"
                 required
                 className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -135,7 +187,14 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ onClose, onSucce
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (detectMaliciousPayload(val).isMalicious) {
+                    setErrorMsg('Caracteres no permitidos en la contraseña.');
+                    return;
+                  }
+                  setPassword(val);
+                }}
                 placeholder="Contraseña"
                 required
                 className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"

@@ -17,6 +17,12 @@ import {
 } from 'lucide-react';
 import { StoreSettings } from '../types';
 import { triggerPurchaseConfetti } from '../utils/confetti';
+import {
+  validateCustomerName,
+  validateDescriptiveText,
+  detectMaliciousPayload,
+  sanitizeSingleLine,
+} from '../utils/securityValidator';
 
 interface CustomerReviewsProps {
   settings: StoreSettings;
@@ -176,16 +182,37 @@ export const CustomerReviews: React.FC<CustomerReviewsProps> = ({ settings }) =>
     e.preventDefault();
     if (!formName.trim() || !formText.trim()) return;
 
+    // Validación estricta del nombre
+    const nameVal = validateCustomerName(formName, 'Nombre');
+    if (!nameVal.valid) {
+      alert(`⚠️ ${nameVal.error}`);
+      return;
+    }
+
+    // Validación estricta del comentario
+    const textVal = validateDescriptiveText(formText, { label: 'Comentario u opinión', minLength: 5, maxLength: 600, required: true });
+    if (!textVal.valid) {
+      alert(`⚠️ ${textVal.error}`);
+      return;
+    }
+
+    // Validación de ciudad
+    const cleanCity = formCity.trim() ? sanitizeSingleLine(formCity, 60) : 'Perú';
+    if (detectMaliciousPayload(cleanCity).isMalicious) {
+      alert('⚠️ Ciudad no permitida.');
+      return;
+    }
+
     setFormSubmitting(true);
 
     setTimeout(() => {
       const newReview: ReviewItem = {
         id: `rev_user_${Date.now()}`,
-        name: formName.trim(),
-        city: formCity || 'Perú',
+        name: nameVal.sanitized,
+        city: cleanCity,
         rating: formRating,
         deliveryTime: formDelivery,
-        text: formText.trim(),
+        text: textVal.sanitized,
         productTag: formService,
         date: 'Reciente',
         isVerifiedUser: true,
@@ -728,7 +755,11 @@ export const CustomerReviews: React.FC<CustomerReviewsProps> = ({ settings }) =>
                       type="text"
                       required
                       value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (detectMaliciousPayload(val).isMalicious) return;
+                        setFormName(val);
+                      }}
                       placeholder="Ej: Carlos Mendoza"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     />
@@ -743,7 +774,11 @@ export const CustomerReviews: React.FC<CustomerReviewsProps> = ({ settings }) =>
                       <input
                         type="text"
                         value={formCity}
-                        onChange={(e) => setFormCity(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (detectMaliciousPayload(val).isMalicious) return;
+                          setFormCity(val);
+                        }}
                         placeholder="Ej: Lima, Perú"
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
                       />
@@ -797,7 +832,11 @@ export const CustomerReviews: React.FC<CustomerReviewsProps> = ({ settings }) =>
                       required
                       rows={3}
                       value={formText}
-                      onChange={(e) => setFormText(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (detectMaliciousPayload(val).isMalicious) return;
+                        setFormText(val);
+                      }}
                       placeholder="Cuéntanos cómo fue tu entrega, la calidad de la cuenta y la atención recibida..."
                       className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 resize-none"
                     />

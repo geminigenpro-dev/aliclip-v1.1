@@ -25,6 +25,14 @@ import {
 } from 'lucide-react';
 import { StoreSettings } from '../../types';
 import { saveSettingsToFirestore } from '../../services/storeService';
+import {
+  validateCustomerName,
+  validateIdentityDocument,
+  validatePhoneNumber,
+  validateCustomerEmail,
+  validateDescriptiveText,
+  detectMaliciousPayload,
+} from '../../utils/securityValidator';
 import { ReceiptQrCode } from '../ReceiptQrCode';
 import {
   downloadElementAsPdf,
@@ -142,15 +150,67 @@ export const AdminBillingTab: React.FC<AdminBillingTabProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Validación de Razón Social
+    const nameVal = validateCustomerName(businessName, 'Razón Social / Nombre Comercial');
+    if (!nameVal.valid) {
+      onToast(`⚠️ ${nameVal.error}`);
+      return;
+    }
+
+    // 2. Validación de RUC / Documento Fiscal
+    const taxVal = validateIdentityDocument(taxId, 'RUC / Documento Fiscal');
+    if (!taxVal.valid) {
+      onToast(`⚠️ ${taxVal.error}`);
+      return;
+    }
+
+    // 3. Validación de Dirección
+    const addrVal = validateDescriptiveText(address, { label: 'Dirección Fiscal', minLength: 3, maxLength: 200, required: true });
+    if (!addrVal.valid) {
+      onToast(`⚠️ ${addrVal.error}`);
+      return;
+    }
+
+    // 4. Validación de Correo
+    const emailVal = validateCustomerEmail(contactEmail, 'Correo de facturación');
+    if (!emailVal.valid) {
+      onToast(`⚠️ ${emailVal.error}`);
+      return;
+    }
+
+    // 5. Validación de Teléfono
+    const phoneVal = validatePhoneNumber(contactPhone, 'Teléfono de contacto');
+    if (!phoneVal.valid) {
+      onToast(`⚠️ ${phoneVal.error}`);
+      return;
+    }
+
+    // 6. Validación de prefijo, título, stampText, headerMessage, footerTerms
+    const textFields = [
+      { val: prefix, label: 'Serie / Prefijo' },
+      { val: title, label: 'Título del comprobante' },
+      { val: stampText, label: 'Sello de garantía' },
+      { val: headerMessage, label: 'Mensaje de cabecera' },
+      { val: footerTerms, label: 'Términos del pie' },
+    ];
+    for (const item of textFields) {
+      const check = detectMaliciousPayload(item.val);
+      if (check.isMalicious) {
+        onToast(`⚠️ ${item.label} rechazado: ${check.reason}`);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const updated: StoreSettings = {
         ...settings,
-        invoiceBusinessName: businessName.trim(),
-        invoiceTaxId: taxId.trim(),
-        invoiceAddress: address.trim(),
-        invoiceContactEmail: contactEmail.trim(),
-        invoiceContactPhone: contactPhone.trim(),
+        invoiceBusinessName: nameVal.sanitized,
+        invoiceTaxId: taxVal.sanitized,
+        invoiceAddress: addrVal.sanitized,
+        invoiceContactEmail: emailVal.sanitized,
+        invoiceContactPhone: phoneVal.sanitized,
         invoicePrefix: prefix.trim(),
         invoiceTitle: title.trim(),
         invoiceTemplateStyle: templateStyle,

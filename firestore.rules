@@ -2,48 +2,59 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Función auxiliar: verifica si el usuario está autenticado
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Función auxiliar: verifica si el usuario tiene rol o email administrativo
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'gemini.genpro@gmail.com' ||
+        request.auth.token.email in ['gemini.genpro@gmail.com', 'alfre.ofc@gmail.com'] ||
+        request.auth.token.admin == true ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 
-    // Digital store products: public catalog viewing with real-time updates for all clients
+    // 1. Catálogo de productos: lectura pública para clientes, escritura restringida a administradores
     match /products/{productId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
 
-    // Global store branding and announcements
+    // 2. Configuración y textos de la tienda: lectura pública, escritura exclusiva de administradores
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
 
-    // Indecopi virtual complaints book
+    // 3. Libro de Reclamaciones: creación pública con validación de campos, lectura y gestión exclusiva de admin
     match /claims/{claimId} {
-      allow read: if true;
-      allow create: if true;
-      allow update, delete: if true;
+      allow create: if request.resource.data.name is string &&
+                       request.resource.data.document is string &&
+                       request.resource.data.email is string;
+      allow read, update, delete: if isAdmin();
     }
 
-    // Admin authorization records
+    // 4. Registro de administradores: protegido estrictamente por RLS
     match /admins/{adminId} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
 
-    // Sales and membership tracking
+    // 5. Historial y registro de ventas (Row-Level Security / RLS granular):
+    // - Creación permitida para registrar nuevas compras confirmadas en la web
+    // - Lectura individual (get): solo el comprador legítimo de ese registro específico o el administrador
+    // - Listado global (list), actualización y eliminación: restringidos exclusivamente a administradores
     match /sales/{saleId} {
-      allow read: if true;
-      allow write: if true;
+      allow create: if request.resource.data.clientName is string &&
+                       request.resource.data.price is string;
+      allow get: if isAdmin() ||
+                    (isSignedIn() && request.auth.token.email == resource.data.clientEmail);
+      allow list: if isAdmin();
+      allow update, delete: if isAdmin();
     }
 
-    // Default deny catch-all
+    // 6. Bloqueo total por defecto para cualquier otra ruta
     match /{document=**} {
       allow read, write: if false;
     }

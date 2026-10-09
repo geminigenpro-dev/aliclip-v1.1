@@ -18,6 +18,10 @@ import { Product } from '../../types';
 import { compressImage, resizeAndCompressImageToBase64 } from '../../utils/imageCompressor';
 import { uploadFileToFirebaseStorage } from '../../firebase';
 import { generateProductDescription } from '../../services/aiService';
+import {
+  validateDescriptiveText,
+  detectMaliciousPayload,
+} from '../../utils/securityValidator';
 
 interface ResourceModalProps {
   isOpen: boolean;
@@ -172,6 +176,33 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    // Validación estricta del recurso
+    const nameVal = validateDescriptiveText(name, { label: 'Nombre del pack o recurso', minLength: 2, maxLength: 90, required: true });
+    if (!nameVal.valid) {
+      onToast(`⚠️ ${nameVal.error}`);
+      return;
+    }
+
+    const tagVal = validateDescriptiveText(tag, { label: 'Etiqueta o formato', maxLength: 60 });
+    if (!tagVal.valid) {
+      onToast(`⚠️ ${tagVal.error}`);
+      return;
+    }
+
+    const descVal = validateDescriptiveText(desc, { label: 'Descripción', minLength: 5, maxLength: 800 });
+    if (!descVal.valid) {
+      onToast(`⚠️ ${descVal.error}`);
+      return;
+    }
+
+    const checkList = [p1Name, p1Price, p2Name, p2Price, resourceDownloadUrl];
+    for (const item of checkList) {
+      if (item && detectMaliciousPayload(item).isMalicious) {
+        onToast('⚠️ Se detectaron caracteres o comandos no permitidos en el recurso.');
+        return;
+      }
+    }
 
     let safeImg = imageUrl.trim();
     if (safeImg.length > 500000) {

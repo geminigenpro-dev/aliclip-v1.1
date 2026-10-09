@@ -77,6 +77,8 @@ import { CourseModal } from './admin/CourseModal';
 import { ResourceModal } from './admin/ResourceModal';
 import { AdminSectionManagerModal } from './admin/AdminSectionManagerModal';
 import { AdminBillingTab } from './admin/AdminBillingTab';
+import { detectMaliciousPayload } from '../utils/securityValidator';
+import { hashPassword } from '../utils/cryptoAuth';
 
 interface AdminModalProps {
   products: Product[];
@@ -806,9 +808,21 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
-  const handleChangeCreds = (e: React.FormEvent) => {
+  const handleChangeCreds = async (e: React.FormEvent) => {
     e.preventDefault();
     setCredStatus(null);
+
+    // Validación estricta contra inyecciones y comandos en credenciales
+    const userCheck = detectMaliciousPayload(newUser);
+    if (userCheck.isMalicious) {
+      setCredStatus({ msg: `Usuario rechazado: ${userCheck.reason}`, success: false });
+      return;
+    }
+    const passCheck = detectMaliciousPayload(newPass);
+    if (passCheck.isMalicious) {
+      setCredStatus({ msg: `Contraseña rechazada: ${passCheck.reason}`, success: false });
+      return;
+    }
 
     if (newPass !== confirmPass) {
       setCredStatus({ msg: 'Las contraseñas nuevas no coinciden.', success: false });
@@ -820,9 +834,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       return;
     }
 
+    // Hashear contraseña antes de almacenar
+    const passHash = await hashPassword(newPass.trim());
     localStorage.setItem(
       'alixplay_local_admin',
-      JSON.stringify({ username: newUser.trim(), pass: newPass.trim() })
+      JSON.stringify({ username: newUser.trim(), passHash })
     );
 
     setCredStatus({

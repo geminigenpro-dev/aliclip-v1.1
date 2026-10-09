@@ -47,6 +47,13 @@ import {
   downloadElementAsPng,
 } from '../utils/receiptExporter';
 
+import {
+  validateCustomerName,
+  validateCustomerEmail,
+  detectMaliciousPayload,
+  sanitizeSingleLine,
+} from '../utils/securityValidator';
+
 interface MyPurchasesModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -191,10 +198,28 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
       onToast('Por favor ingresa tu correo electrónico.');
       return;
     }
-    const cleanEmail = clientInputEmail.trim().toLowerCase();
-    const cleanName = clientInputName.trim() || cleanEmail.split('@')[0];
-    handleLookup(cleanEmail, cleanName, '', false);
-    onToast(`¡Sesión iniciada con: ${cleanEmail}!`);
+
+    // Validación estricta contra comandos o inyecciones
+    const emailVal = validateCustomerEmail(clientInputEmail, 'Correo electrónico');
+    if (!emailVal.valid) {
+      onToast(`⚠️ ${emailVal.error}`);
+      return;
+    }
+
+    let cleanName = '';
+    if (clientInputName.trim()) {
+      const nameVal = validateCustomerName(clientInputName, 'Nombre');
+      if (!nameVal.valid) {
+        onToast(`⚠️ ${nameVal.error}`);
+        return;
+      }
+      cleanName = nameVal.sanitized;
+    } else {
+      cleanName = emailVal.sanitized.split('@')[0];
+    }
+
+    handleLookup(emailVal.sanitized, cleanName, '', false);
+    onToast(`¡Sesión iniciada con: ${emailVal.sanitized}!`);
   };
 
   // Token Direct Lookup Submit
@@ -204,7 +229,14 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
       onToast('Por favor ingresa tu Token o Código de Pedido.');
       return;
     }
-    const cleanToken = clientInputToken.trim();
+
+    const check = detectMaliciousPayload(clientInputToken);
+    if (check.isMalicious) {
+      onToast(`⚠️ Token rechazado: ${check.reason}`);
+      return;
+    }
+
+    const cleanToken = sanitizeSingleLine(clientInputToken, 30);
     handleLookup(cleanToken, 'Cliente por Token', '', false);
     onToast(`¡Consultando pedido con token: ${cleanToken}!`);
   };
@@ -993,7 +1025,15 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                         <input
                           type="text"
                           value={clientInputName}
-                          onChange={(e) => setClientInputName(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const check = detectMaliciousPayload(val);
+                            if (check.isMalicious) {
+                              onToast(`⚠️ Entrada rechazada: ${check.reason}`);
+                              return;
+                            }
+                            setClientInputName(val);
+                          }}
                           placeholder="Ej: Renzo Silva"
                           className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                         />
@@ -1010,7 +1050,15 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                           type="email"
                           required
                           value={clientInputEmail}
-                          onChange={(e) => setClientInputEmail(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const check = detectMaliciousPayload(val);
+                            if (check.isMalicious) {
+                              onToast(`⚠️ Correo rechazado: ${check.reason}`);
+                              return;
+                            }
+                            setClientInputEmail(val);
+                          }}
                           placeholder="ejemplo: renzo.silva@gmail.com"
                           className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                         />
@@ -1051,7 +1099,15 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                         type="text"
                         required
                         value={clientInputToken}
-                        onChange={(e) => setClientInputToken(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const check = detectMaliciousPayload(val);
+                          if (check.isMalicious) {
+                            onToast(`⚠️ Token rechazado: ${check.reason}`);
+                            return;
+                          }
+                          setClientInputToken(val);
+                        }}
                         placeholder="Ej: ALI-701, ALI-702, sale_1"
                         className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                       />

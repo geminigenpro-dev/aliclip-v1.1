@@ -24,6 +24,7 @@ import {
   StorefrontSectionConfig,
 } from '../types';
 import { resizeAndCompressImageToBase64, isSafeFirestoreImageSize } from '../utils/imageCompressor';
+import { detectMaliciousPayload, sanitizeStrictText } from '../utils/securityValidator';
 
 export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
   {
@@ -1205,6 +1206,16 @@ export async function updateProductStock(id: string, newStock: number): Promise<
 export async function saveSettingsToFirestore(settings: Partial<StoreSettings>): Promise<void> {
   const docRef = doc(db, SETTINGS_COLLECTION, 'store');
 
+  // Validación estricta de textos en settings contra código o inyecciones
+  for (const [key, val] of Object.entries(settings)) {
+    if (typeof val === 'string' && !key.toLowerCase().includes('base64')) {
+      const check = detectMaliciousPayload(val);
+      if (check.isMalicious) {
+        throw new Error(`Configuración rechazada en campo "${key}": ${check.reason}`);
+      }
+    }
+  }
+
   // Prevent oversized image URLs / base64 from breaking the 1MB Firestore document limit
   if (settings.logoBase64 && settings.logoBase64.length > 900000) {
     throw new Error('El logotipo supera el límite de tamaño de Firestore (1 MB). Por favor comprime la imagen antes de guardar.');
@@ -1238,10 +1249,28 @@ export async function savePaymentMethodsToFirestore(methods: PaymentMethod[]): P
  * Submits a new claim to the Libro de Reclamaciones
  */
 export async function submitClaimToFirestore(claim: Omit<Claim, 'id' | 'createdAt' | 'status'>): Promise<string> {
+  // Validación estricta contra código malicioso en claims
+  const fieldsToCheck = [claim.name, claim.document, claim.phone, claim.email, claim.service, claim.description, claim.request];
+  for (const field of fieldsToCheck) {
+    if (field) {
+      const check = detectMaliciousPayload(field);
+      if (check.isMalicious) {
+        throw new Error(`Contenido malicioso rechazado: ${check.reason}`);
+      }
+    }
+  }
+
   const id = `claim_${Date.now()}`;
   const docRef = doc(db, CLAIMS_COLLECTION, id);
   const fullClaim: Claim = removeUndefinedFields({
     ...claim,
+    name: sanitizeStrictText(claim.name, 100),
+    document: sanitizeStrictText(claim.document, 30),
+    phone: sanitizeStrictText(claim.phone, 30),
+    email: sanitizeStrictText(claim.email, 120),
+    service: sanitizeStrictText(claim.service, 150),
+    description: sanitizeStrictText(claim.description, 2000),
+    request: sanitizeStrictText(claim.request, 1500),
     id,
     createdAt: new Date().toISOString(),
     status: 'pending',
@@ -1623,12 +1652,27 @@ export async function createSaleRecord(
   saleData: Omit<SaleRecord, 'id' | 'createdAt'>,
   decreaseStock = true
 ): Promise<SaleRecord> {
+  // Validación estricta contra inyecciones y comandos en datos de venta
+  const fields = [saleData.clientName, saleData.clientPhone, saleData.clientEmail, saleData.notes];
+  for (const f of fields) {
+    if (f) {
+      const check = detectMaliciousPayload(f);
+      if (check.isMalicious) {
+        throw new Error(`Datos de venta rechazados: ${check.reason}`);
+      }
+    }
+  }
+
   const id = `sale_${Date.now()}`;
   const accessToken = saleData.accessToken || generateSaleToken();
   const docRef = doc(db, SALES_COLLECTION, id);
   const fullSale: SaleRecord = removeUndefinedFields({
     ...saleData,
-    accessToken,
+    clientName: sanitizeStrictText(saleData.clientName, 100),
+    clientPhone: sanitizeStrictText(saleData.clientPhone, 40),
+    clientEmail: sanitizeStrictText(saleData.clientEmail || '', 120),
+    notes: saleData.notes ? sanitizeStrictText(saleData.notes, 1000) : undefined,
+    accessToken: sanitizeStrictText(accessToken, 50),
     id,
     createdAt: new Date().toISOString(),
   });
@@ -1663,6 +1707,15 @@ export function queryCustomerPurchases(
   clientPhone?: string;
   records: SaleRecord[];
 } {
+  if (!searchQuery || !searchQuery.trim()) {
+    return { matchedType: 'none', records: [] };
+  }
+
+  // Rechazar queries con código malicioso o inyecciones
+  if (detectMaliciousPayload(searchQuery).isMalicious) {
+    return { matchedType: 'none', records: [] };
+  }
+
   const rawQuery = searchQuery.trim().toLowerCase();
   if (!rawQuery) {
     return { matchedType: 'none', records: [] };

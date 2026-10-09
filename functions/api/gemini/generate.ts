@@ -35,7 +35,23 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       );
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // Validación estricta contra inyecciones y comandos maliciosos
+    const dangerousPatterns = [
+      /<\s*script\b[^>]*>/i,
+      /\bon[a-z]{3,15}\s*=/i,
+      /\bjavascript\s*:/i,
+      /[;&|`]\s*(rm|cat|curl|wget|bash|sh|sudo|chmod)\b/i,
+      /\/bin\/(sh|bash)/i,
+      /\0/
+    ];
+    if (dangerousPatterns.some((p) => p.test(prompt))) {
+      return new Response(
+        JSON.stringify({ error: 'Solicitud rechazada: Se detectaron caracteres o comandos no permitidos en el texto.' }),
+        { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
     const payload: any = {
       contents: [

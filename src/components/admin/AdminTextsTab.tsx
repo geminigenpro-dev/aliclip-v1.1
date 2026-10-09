@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { StoreSettings, FaqItemSetting, BenefitsTickerItemSetting } from '../../types';
 import { DEFAULT_FAQ_ITEMS, DEFAULT_TICKER_ITEMS, saveSettingsToFirestore } from '../../services/storeService';
+import { detectMaliciousPayload } from '../../utils/securityValidator';
 
 interface AdminTextsTabProps {
   settings: StoreSettings;
@@ -65,6 +66,26 @@ export const AdminTextsTab: React.FC<AdminTextsTabProps> = ({
   };
 
   const handleSave = async () => {
+    // Escaneo exhaustivo de textos contra inyección de comandos o scripts
+    for (const [key, val] of Object.entries(localSettings)) {
+      if (typeof val === 'string' && !key.toLowerCase().includes('base64')) {
+        const check = detectMaliciousPayload(val);
+        if (check.isMalicious) {
+          onToast(`⚠️ Texto rechazado en "${key}": ${check.reason}`);
+          return;
+        }
+      }
+    }
+
+    if (Array.isArray(localSettings.faqItems)) {
+      for (const faq of localSettings.faqItems) {
+        if (detectMaliciousPayload(faq.question).isMalicious || detectMaliciousPayload(faq.answer).isMalicious) {
+          onToast('⚠️ Pregunta o respuesta con caracteres/comandos no permitidos.');
+          return;
+        }
+      }
+    }
+
     setSaving(true);
     try {
       await saveSettingsToFirestore(localSettings);

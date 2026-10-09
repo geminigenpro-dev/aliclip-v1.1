@@ -25,6 +25,12 @@ import { auth, googleProvider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { triggerPurchaseConfetti } from '../utils/confetti';
 import { getDurationOptions, DurationOption } from '../utils/durationPricing';
+import {
+  validateCustomerName,
+  validateCustomerEmail,
+  validatePhoneNumber,
+  detectMaliciousPayload,
+} from '../utils/securityValidator';
 
 interface BuyModalProps {
   product: Product | null;
@@ -261,12 +267,31 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
       return;
     }
 
-    // Validación del correo
-    if (!clientEmail.trim()) {
+    // Validación estricta del nombre (si fue provisto)
+    if (clientName.trim()) {
+      const nameVal = validateCustomerName(clientName, 'Nombre');
+      if (!nameVal.valid) {
+        onToast(`⚠️ ${nameVal.error}`);
+        return;
+      }
+    }
+
+    // Validación estricta del correo
+    const emailVal = validateCustomerEmail(clientEmail, 'Correo');
+    if (!emailVal.valid) {
       setEmailError(true);
-      onToast('⚠️ Ingresa tu correo o vincula con Google para asociar tu pedido y recibir el comprobante.');
-      setTimeout(() => setEmailError(false), 2500);
+      onToast(`⚠️ ${emailVal.error}`);
+      setTimeout(() => setEmailError(false), 3000);
       return;
+    }
+
+    // Validación estricta del teléfono (si fue provisto)
+    if (clientPhone.trim()) {
+      const phoneVal = validatePhoneNumber(clientPhone, 'Teléfono');
+      if (!phoneVal.valid) {
+        onToast(`⚠️ ${phoneVal.error}`);
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -274,9 +299,9 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
     // Generar Token único de Pedido y Garantía
     const tokenDigits = Math.floor(10000 + Math.random() * 90000);
     const saleAccessToken = `ALI-${tokenDigits}`;
-    const cleanEmail = clientEmail.trim().toLowerCase();
-    const cleanName = clientName.trim() || 'Cliente VIP';
-    const cleanPhone = clientPhone.trim() || settings.whatsappDisplay || '+51 987 654 321';
+    const cleanEmail = emailVal.sanitized;
+    const cleanName = clientName.trim() ? validateCustomerName(clientName).sanitized : 'Cliente VIP';
+    const cleanPhone = clientPhone.trim() ? validatePhoneNumber(clientPhone).sanitized : (settings.whatsappDisplay || '+51 987 654 321');
 
     // Generar registro oficial de venta
     const newSaleData: Omit<SaleRecord, 'id' | 'createdAt'> = {
@@ -797,9 +822,15 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
                   type="text"
                   value={clientName}
                   onChange={(e) => {
-                    setClientName(e.target.value);
+                    const val = e.target.value;
+                    const check = detectMaliciousPayload(val);
+                    if (check.isMalicious) {
+                      onToast(`⚠️ Entrada rechazada: ${check.reason}`);
+                      return;
+                    }
+                    setClientName(val);
                     try {
-                      localStorage.setItem('alixplay_client_name', e.target.value);
+                      localStorage.setItem('alixplay_client_name', val);
                     } catch (err) {
                       console.warn(err);
                     }
@@ -823,10 +854,16 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
                   type="email"
                   value={clientEmail}
                   onChange={(e) => {
-                    setClientEmail(e.target.value);
+                    const val = e.target.value;
+                    const check = detectMaliciousPayload(val);
+                    if (check.isMalicious) {
+                      onToast(`⚠️ Correo rechazado: ${check.reason}`);
+                      return;
+                    }
+                    setClientEmail(val);
                     setEmailError(false);
                     try {
-                      localStorage.setItem('alixplay_client_email', e.target.value);
+                      localStorage.setItem('alixplay_client_email', val);
                     } catch (err) {
                       console.warn(err);
                     }
@@ -859,9 +896,15 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
                   type="tel"
                   value={clientPhone}
                   onChange={(e) => {
-                    setClientPhone(e.target.value);
+                    const val = e.target.value;
+                    const check = detectMaliciousPayload(val);
+                    if (check.isMalicious) {
+                      onToast(`⚠️ Teléfono rechazado: ${check.reason}`);
+                      return;
+                    }
+                    setClientPhone(val);
                     try {
-                      localStorage.setItem('alixplay_client_phone', e.target.value);
+                      localStorage.setItem('alixplay_client_phone', val);
                     } catch (err) {
                       console.warn(err);
                     }
