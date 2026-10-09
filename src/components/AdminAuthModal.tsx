@@ -20,8 +20,10 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ onClose, onSucce
 
     const cleanUser = username.trim().toLowerCase();
     const stored = localStorage.getItem('alixplay_local_admin');
-    let validUser = 'admin';
-    let validPass = 'admin';
+    const defaultEnvUser = (import.meta.env.VITE_ADMIN_DEFAULT_USER as string) || 'admin';
+    const defaultEnvPass = (import.meta.env.VITE_ADMIN_DEFAULT_PASS as string) || 'admin';
+    let validUser = defaultEnvUser.toLowerCase();
+    let validPass = defaultEnvPass;
 
     if (stored) {
       try {
@@ -35,13 +37,13 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ onClose, onSucce
 
     if (
       cleanUser === validUser &&
-      (password === validPass || password === 'admin' || password === 'aliclip' || password === 'alixplay' || password === '1234')
+      (password === validPass || (defaultEnvPass && password === defaultEnvPass))
     ) {
       onSuccess(username.trim());
       onToast(`¡Sesión iniciada como administrador (${username})!`);
       onClose();
     } else {
-      setErrorMsg('Usuario o contraseña incorrectos. Por defecto usa: admin / admin');
+      setErrorMsg(`Usuario o contraseña incorrectos. Verifica tus credenciales de acceso.`);
     }
   };
 
@@ -56,7 +58,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ onClose, onSucce
       onClose();
     } catch (err: unknown) {
       console.error('Google Sign-In error:', err);
-      setErrorMsg('No se pudo abrir ventana de Google (posible bloqueo en iframe). Puedes ingresar usando admin / admin.');
+      setErrorMsg('No se pudo abrir ventana de Google (posible bloqueo en iframe). Puedes ingresar usando tus credenciales de administrador.');
     } finally {
       setLoading(false);
     }

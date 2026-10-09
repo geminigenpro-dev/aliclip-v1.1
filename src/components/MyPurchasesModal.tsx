@@ -848,7 +848,7 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
 
                   {invoiceShowQrCode && (
                     <ReceiptQrCode
-                      value={`https://wa.me/${(settings.whatsappNumber || '51987654321').replace(/[^0-9]/g, '')}?text=Validar%20Comprobante%20${receiptSale.accessToken || receiptSale.id}`}
+                      value={`https://wa.me/${(settings.whatsappNumber || (import.meta.env.VITE_STORE_WHATSAPP_NUMBER as string) || '51900000000').replace(/[^0-9]/g, '')}?text=Validar%20Comprobante%20${receiptSale.accessToken || receiptSale.id}`}
                       size={88}
                       label="ESCANEAR QR"
                     />

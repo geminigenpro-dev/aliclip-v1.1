@@ -4,22 +4,25 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
 
-// Firebase client configuration with optional environment variable overrides
+// Firebase client configuration with environment variable support and optional local config fallback
 const resolvedFirebaseConfig = {
   ...firebaseConfig,
-  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string) || firebaseConfig.apiKey,
-  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) || firebaseConfig.authDomain,
-  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || firebaseConfig.projectId,
-  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) || firebaseConfig.storageBucket,
-  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || firebaseConfig.messagingSenderId,
-  appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) || firebaseConfig.appId,
-  measurementId: (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string) || (firebaseConfig as any).measurementId,
+  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string) || firebaseConfig?.apiKey,
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) || firebaseConfig?.authDomain,
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || firebaseConfig?.projectId,
+  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) || firebaseConfig?.storageBucket,
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || firebaseConfig?.messagingSenderId,
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) || firebaseConfig?.appId,
+  measurementId: (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string) || (firebaseConfig as any)?.measurementId,
+  databaseURL: (import.meta.env.VITE_FIREBASE_DATABASE_URL as string) || (firebaseConfig as any)?.databaseURL,
 };
 
 export const app = initializeApp(resolvedFirebaseConfig);
 
 // Initialize Firestore (handles named DB or default project database)
-const dbId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
+const dbId =
+  (import.meta.env.VITE_FIREBASE_DATABASE_ID as string) ||
+  (firebaseConfig as { firestoreDatabaseId?: string })?.firestoreDatabaseId;
 export const db = dbId ? getFirestore(app, dbId) : getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);

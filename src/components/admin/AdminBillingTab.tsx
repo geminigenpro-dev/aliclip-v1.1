@@ -671,7 +671,7 @@ export const AdminBillingTab: React.FC<AdminBillingTabProps> = ({
 
               {showQr && (
                 <ReceiptQrCode
-                  value={`https://wa.me/${(settings.whatsappNumber || '51987654321').replace(/[^0-9]/g, '')}?text=Validar%20Comprobante%20${prefix || 'B001'}-MUESTRA`}
+                  value={`https://wa.me/${(settings.whatsappNumber || (import.meta.env.VITE_STORE_WHATSAPP_NUMBER as string) || '51900000000').replace(/[^0-9]/g, '')}?text=Validar%20Comprobante%20${prefix || 'B001'}-MUESTRA`}
                   size={84}
                   label="ESCANEAR QR"
                 />
