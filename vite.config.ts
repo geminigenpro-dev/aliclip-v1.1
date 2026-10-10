@@ -5,7 +5,16 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: 'cloudflare-no-rocket-loader',
+        transformIndexHtml(html: string) {
+          return html.replace(/<script(?![^>]*data-cfasync)/g, '<script data-cfasync="false"');
+        },
+      },
+    ],
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname || '.', '.'),
