@@ -76,7 +76,7 @@ export default function App() {
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [sales, setSales] = useState<SaleRecord[]>(INITIAL_SALES);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Filter & Search
   const [category, setCategory] = useState<'all' | 'ai' | 'streaming' | 'courses' | 'resources'>('all');
