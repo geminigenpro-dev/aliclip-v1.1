@@ -338,7 +338,7 @@ export const Hero: React.FC<HeroProps> = ({
 
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
               {settings.heroDescription ||
-                'Cuentas 100% privadas y renovables mes a mes con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.'}
+                'Cuentas 100% privadas y renovables con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.'}
             </p>
 
             {/* Action Buttons & Trust Counter */}

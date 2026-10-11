@@ -18,6 +18,9 @@ import {
   Phone,
   FileText,
   ExternalLink,
+  UserCheck,
+  ArrowRight,
+  Lock,
 } from 'lucide-react';
 import { Product, ProductPlan, StoreSettings, PaymentMethod, SaleRecord } from '../types';
 import { DEFAULT_PAYMENT_METHODS, createSaleRecord } from '../services/storeService';
@@ -25,6 +28,7 @@ import { auth, googleProvider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { triggerPurchaseConfetti } from '../utils/confetti';
 import { getDurationOptions, DurationOption } from '../utils/durationPricing';
+import { sendRegistrationNotification } from '../services/notificationService';
 import {
   validateCustomerName,
   validateCustomerEmail,
@@ -120,6 +124,36 @@ export const BuyModal: React.FC<BuyModalProps> = ({
   const [isLinkingGoogle, setIsLinkingGoogle] = useState<boolean>(false);
   const [confirmedSale, setConfirmedSale] = useState<SaleRecord | null>(null);
   const [copiedSaleToken, setCopiedSaleToken] = useState<boolean>(false);
+
+  // Verificación de sesión de cliente activa para historial en 'Mis compras'
+  const [hasCustomerSession, setHasCustomerSession] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('alix_customer_session');
+      if (!saved) return false;
+      const parsed = JSON.parse(saved);
+      return Boolean(parsed && (parsed.email || (parsed.query && parsed.query.includes('@'))));
+    } catch {
+      return false;
+    }
+  });
+
+  // Notificación / Pop-up de registro obligatorio antes de comprar
+  const [showRegistrationNotice, setShowRegistrationNotice] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('alix_customer_session');
+      if (!saved) return true;
+      const parsed = JSON.parse(saved);
+      return !Boolean(parsed && (parsed.email || (parsed.query && parsed.query.includes('@'))));
+    } catch {
+      return true;
+    }
+  });
+
+  const [quickRegName, setQuickRegName] = useState<string>('');
+  const [quickRegEmail, setQuickRegEmail] = useState<string>('');
+  const [quickRegPhone, setQuickRegPhone] = useState<string>(() => clientPhone || '');
+  const [quickRegError, setQuickRegError] = useState<string>('');
+  const [registrationWaCopyUrl, setRegistrationWaCopyUrl] = useState<string>('');
 
   // Mandatory Receipt checkbox & validation errors
   const [hasReceiptChecked, setHasReceiptChecked] = useState<boolean>(false);
@@ -219,7 +253,9 @@ export const BuyModal: React.FC<BuyModalProps> = ({
             })
           );
         } catch {}
-        onToast(`¡Cuenta de Google (${mail}) vinculada!`);
+        setHasCustomerSession(true);
+        setShowRegistrationNotice(false);
+        onToast(`¡Cuenta de Google (${mail}) vinculada con éxito!`);
       }
     } catch (err: any) {
       console.warn('Google popup error:', err);
@@ -227,9 +263,85 @@ export const BuyModal: React.FC<BuyModalProps> = ({
       setClientEmail(fallbackMail);
       if (!clientName) setClientName('Usuario Google');
       setIsGoogleLinked(true);
+      setHasCustomerSession(true);
+      setShowRegistrationNotice(false);
       onToast(`¡Cuenta de Google (${fallbackMail}) vinculada!`);
     } finally {
       setIsLinkingGoogle(false);
+    }
+  };
+
+  const handleQuickRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setQuickRegError('');
+
+    const nameCheck = validateCustomerName(quickRegName, 'Nombre');
+    if (!nameCheck.valid) {
+      setQuickRegError(nameCheck.error || 'Nombre inválido');
+      return;
+    }
+
+    const emailCheck = validateCustomerEmail(quickRegEmail, 'Correo');
+    if (!emailCheck.valid) {
+      setQuickRegError(emailCheck.error || 'Correo inválido');
+      return;
+    }
+
+    const phoneCheck = validatePhoneNumber(quickRegPhone, 'WhatsApp');
+    if (!phoneCheck.valid) {
+      setQuickRegError(phoneCheck.error || 'Número de WhatsApp inválido');
+      return;
+    }
+
+    const cleanEmail = emailCheck.sanitized;
+    const cleanName = nameCheck.sanitized;
+    const cleanPhone = phoneCheck.sanitized;
+
+    setClientEmail(cleanEmail);
+    setClientName(cleanName);
+    setClientPhone(cleanPhone);
+    setHasCustomerSession(true);
+    setShowRegistrationNotice(false);
+
+    try {
+      localStorage.setItem(
+        'alix_customer_session',
+        JSON.stringify({
+          query: cleanEmail,
+          email: cleanEmail,
+          name: cleanName,
+          phone: cleanPhone,
+          isGoogle: false,
+        })
+      );
+      localStorage.setItem('alixplay_client_email', cleanEmail);
+      localStorage.setItem('alixplay_client_name', cleanName);
+      localStorage.setItem('alixplay_client_phone', cleanPhone);
+    } catch {}
+
+    // Despacho automático de copia de registro al correo y WhatsApp del usuario
+    try {
+      const notifRes = await sendRegistrationNotification(
+        {
+          name: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone,
+        },
+        settings.name || 'AliClip Store'
+      );
+
+      if (notifRes.waUrl) {
+        setRegistrationWaCopyUrl(notifRes.waUrl);
+        // Abrir copia en WhatsApp para el cliente
+        try {
+          window.open(notifRes.waUrl, '_blank', 'noopener,noreferrer');
+        } catch {}
+      }
+
+      onToast(`¡Registro completado! Copia enviada a ${cleanEmail} y a tu WhatsApp (${cleanPhone}).`);
+    } catch (err) {
+      console.warn('Registration notification warning:', err);
+      onToast(`¡Cuenta creada para ${cleanName}! Procede con tu compra.`);
     }
   };
 
@@ -258,6 +370,13 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
   // 5. Ofrecer acceso directo a 'Mis Compras' o abrir WhatsApp oficial
   const handleConfirmWhatsApp = async () => {
     if (isProcessing) return;
+
+    // Validación OBLIGATORIA de registro previo antes de comprar
+    if (!hasCustomerSession) {
+      setShowRegistrationNotice(true);
+      onToast('⚠️ Debes registrarte en tu cuenta de cliente antes de realizar la compra.');
+      return;
+    }
 
     // Validación OBLIGATORIA del check
     if (!hasReceiptChecked) {
@@ -327,13 +446,7 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
       durationMonths: selectedDurationMonths,
       durationText: selectedDuration.label,
       status: 'activa',
-      serviceCredentials: {
-        email: cleanEmail,
-        profileName: cleanName,
-        pin: `${Math.floor(1000 + Math.random() * 9000)}`,
-        instructions: `Tu membresía de ${product.name} (${currentPlan.name}) está vinculada con éxito. Consulta tu comprobante y credenciales en Mis Compras.`,
-      },
-      notes: `Compra confirmada vía web (${selectedMethod.name}). Comprobante B001-${tokenDigits} emitido automáticamente.`,
+      notes: `Compra realizada vía web (${selectedMethod.name}). Pendiente de despacho de credenciales oficiales por soporte@aliclip.site.`,
     };
 
     let savedRecord: SaleRecord;
@@ -461,6 +574,21 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
               </div>
             </div>
 
+            {/* Aviso Destacado: Envío de Accesos por Correo soporte@aliclip.site */}
+            <div className="w-full max-w-sm bg-gradient-to-r from-indigo-950/90 to-purple-950/90 border border-indigo-500/50 rounded-2xl p-3.5 mb-3 text-left space-y-2 shadow-lg">
+              <div className="flex items-center gap-2 text-indigo-300 font-black text-xs">
+                <Mail className="w-4 h-4 text-indigo-400 shrink-0" />
+                <span>¡Revisa tu bandeja de correo electrónico!</span>
+              </div>
+              <p className="text-[11.5px] text-slate-100 leading-relaxed font-medium">
+                Por favor, <strong>revise su bandeja de correo electrónico</strong>, ya que el envío de sus datos de acceso se realizará vía correo electrónico registrado en el panel ({clientEmail.trim() ? <strong className="text-white underline font-mono">{clientEmail.trim()}</strong> : 'tu correo registrado'}) directamente desde <strong className="text-indigo-300">soporte@aliclip.site</strong> una vez confirmada la venta desde el panel admin.
+              </p>
+              <div className="pt-1.5 border-t border-indigo-900/60 flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-slate-300 gap-1">
+                <span className="text-amber-300 font-bold">⚠️ Revisa tu bandeja de entrada o spam.</span>
+                <span className="text-emerald-400 font-bold">WhatsApp Soporte: +51967693595</span>
+              </div>
+            </div>
+
             {/* Unique Order Token Display Card */}
             {confirmedSale && (
               <div className="w-full max-w-sm bg-gradient-to-r from-indigo-950/70 to-purple-950/70 border border-indigo-500/40 rounded-2xl p-3 mb-3 text-left">
@@ -552,6 +680,208 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
               >
                 Cerrar ventana y seguir navegando
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* POP-UP NOTIFICACIÓN: REGISTRO OBLIGATORIO DE CLIENTE ANTES DE COMPRAR */}
+        {showRegistrationNotice && !hasCustomerSession && (
+          <div className="absolute inset-0 z-50 bg-slate-950/92 backdrop-blur-md rounded-3xl p-5 sm:p-6 flex flex-col justify-between overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            <div>
+              {/* Encabezado del Pop-up */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
+                      Paso Previo Obligatorio
+                    </span>
+                    <h4 className="text-base sm:text-lg font-black text-white leading-tight">
+                      Regístrate para Realizar tu Compra
+                    </h4>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                  title="Cerrar y volver a la tienda"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Mensaje descriptivo */}
+              <p className="text-xs text-slate-300 mt-3 leading-relaxed">
+                Para contratar <strong>{product.name} ({selectedDuration.label})</strong>, debes ingresar a tu cuenta de cliente desde <strong>"Mis compras"</strong>. Así tus credenciales, PIN y comprobante oficial quedarán vinculados a tu nombre con acceso permanente 24/7.
+              </p>
+
+              {/* Tarjeta con los 3 Pasos Clave */}
+              <div className="mt-3.5 space-y-2 bg-slate-900/90 p-3.5 rounded-2xl border border-indigo-500/30 text-xs shadow-inner">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                    1
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-white text-[11.5px]">Tu portal en "Mis compras"</h5>
+                    <p className="text-[10.5px] text-slate-400 leading-tight">
+                      Es tu panel personal para consultar pedidos, claves de acceso, fecha de vencimiento y garantías.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5">
+                  <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                    2
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-white text-[11.5px]">Registro en 1 solo clic</h5>
+                    <p className="text-[10.5px] text-slate-400 leading-tight">
+                      Vincula tu cuenta con Google / Gmail o ingresa tu correo electrónico para asociar tus datos de compra.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5">
+                  <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                    3
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-white text-[11.5px]">Historial con todos los detalles</h5>
+                    <p className="text-[10.5px] text-slate-400 leading-tight">
+                      Accede de inmediato a tus contraseñas, PIN de pantalla y descarga tu comprobante limpio en PDF o PNG.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notificación oficial de entrega de accesos vía correo soporte@aliclip.site */}
+              <div className="mt-3 p-3 rounded-2xl bg-indigo-950/80 border border-indigo-500/40 text-left space-y-1.5 shadow-sm">
+                <div className="flex items-center gap-2 text-indigo-300 font-black text-[11px]">
+                  <Mail className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span>Aviso Importante: Envío de Accesos por Correo</span>
+                </div>
+                <p className="text-[11px] text-slate-200 leading-relaxed font-medium">
+                  Por favor, <strong>revise su bandeja de correo electrónico</strong>, ya que el envío de sus datos de acceso se realizará vía correo electrónico registrado en el panel desde <strong className="text-white font-bold">soporte@aliclip.site</strong> una vez confirmada la venta desde el panel admin.
+                </p>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-indigo-900/50">
+                  <span className="text-amber-300 font-bold">Revisa tu bandeja de entrada y spam</span>
+                  <span className="text-emerald-400 font-bold">WhatsApp: +51967693595</span>
+                </div>
+              </div>
+
+              {/* Opciones de Registro / Ingreso */}
+              <div className="mt-4 space-y-2.5">
+                {/* Opción 1: Conectar con Google */}
+                <button
+                  type="button"
+                  onClick={handleGoogleLink}
+                  disabled={isLinkingGoogle}
+                  className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+                >
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  <span>{isLinkingGoogle ? 'Conectando con Google...' : '⚡ Ingresar con Google / Gmail en 1 Clic'}</span>
+                </button>
+
+                {/* Opción 2: Formulario rápido con correo y WhatsApp */}
+                <form onSubmit={handleQuickRegister} className="bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-300 block uppercase tracking-wider">
+                      O regístrate con tus datos oficiales:
+                    </span>
+                    <span className="text-[9.5px] font-bold text-emerald-400 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                      Copia a Correo &amp; WhatsApp
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <User className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        required
+                        value={quickRegName}
+                        onChange={(e) => setQuickRegName(e.target.value)}
+                        placeholder="Nombre completo (ej: Renzo Silva)"
+                        className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-800 text-white text-xs border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 font-medium"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="relative">
+                        <Mail className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="email"
+                          required
+                          value={quickRegEmail}
+                          onChange={(e) => setQuickRegEmail(e.target.value)}
+                          placeholder="tucorreo@gmail.com"
+                          className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-800 text-white text-xs border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 font-medium"
+                        />
+                      </div>
+
+                      <div className="relative">
+                        <Phone className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="tel"
+                          required
+                          value={quickRegPhone}
+                          onChange={(e) => setQuickRegPhone(e.target.value)}
+                          placeholder="WhatsApp: +51 987 654 321"
+                          className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-800 text-white text-xs border border-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-slate-400 italic leading-tight">
+                    🔒 Recibirás inmediatamente una copia de confirmación con tus datos en tu correo y en tu número de WhatsApp.
+                  </p>
+
+                  {quickRegError && (
+                    <span className="text-[10px] text-rose-400 font-bold block bg-rose-950/40 p-2 rounded-lg border border-rose-900/60">
+                      ⚠️ {quickRegError}
+                    </span>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-98"
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    <span>Registrar Cuenta &amp; Enviar Copia a mi Correo / WhatsApp</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {/* Botón inferior: Ir al panel de clientes 'Mis compras' */}
+            <div className="pt-3 border-t border-slate-800/80 mt-3 text-center space-y-1.5">
+              {onOpenMyPurchases && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenMyPurchases();
+                  }}
+                  className="w-full py-2 px-3 rounded-xl border border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Ir al Panel de Clientes "Mis compras"</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <p className="text-[10px] text-slate-500">
+                🔒 Tus compras y garantías cuentan con encriptación y acceso privado.
+              </p>
             </div>
           </div>
         )}
@@ -772,12 +1102,44 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
                   <Check className="w-3 h-3 stroke-[3]" />
                   <span>Google Vinculado</span>
                 </span>
+              ) : hasCustomerSession ? (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-300 dark:border-emerald-800">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                  <span>Cuenta Activa</span>
+                </span>
               ) : (
                 <span className="text-[10px] font-bold text-indigo-500">
                   Entrega 100% Automática
                 </span>
               )}
             </div>
+
+            {/* Active Customer Session Card */}
+            {hasCustomerSession && (
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 block truncate">
+                      Identidad activa: <strong className="text-emerald-600 dark:text-emerald-400">{clientName || clientEmail}</strong>
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
+                      {clientEmail} • Pedido y comprobante asociados a tu panel "Mis compras"
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasCustomerSession(false);
+                    setShowRegistrationNotice(true);
+                  }}
+                  className="text-[10px] font-bold text-indigo-500 hover:underline shrink-0 cursor-pointer"
+                >
+                  Cambiar
+                </button>
+              </div>
+            )}
 
             {/* Quick 1-Click Google Link Button */}
             {!isGoogleLinked && (

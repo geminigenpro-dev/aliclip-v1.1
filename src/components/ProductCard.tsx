@@ -218,15 +218,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   decoding="async"
                   className="w-full h-full object-cover transform transition-transform duration-300 group-hover:scale-105"
                 />
-                <button
-                  type="button"
-                  onClick={handleQuickViewClick}
-                  aria-label={`Ver detalles de ${product.name}`}
-                  className="absolute inset-0 bg-black/45 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-0.5 text-white text-[10px] font-bold cursor-pointer"
-                >
-                  <Eye className="w-4 h-4 text-cyan-300" />
-                  <span className="leading-none text-[9.5px]">Detalles</span>
-                </button>
               </div>
             ) : (
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-b from-purple-500/10 via-indigo-500/5 to-transparent border border-slate-200/80 dark:border-slate-800 flex items-center justify-center p-2 relative group-hover:border-purple-400/50 group-hover:shadow-[0_0_24px_rgba(168,85,247,0.25)] transition-all duration-300">
@@ -245,17 +236,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     {renderIcon(product.icon)}
                   </div>
                 )}
-
-                {/* Quick View Floating Pill on Image */}
-                <button
-                  type="button"
-                  onClick={handleQuickViewClick}
-                  aria-label={`Ver detalles de ${product.name}`}
-                  className="absolute inset-0 bg-black/45 backdrop-blur-xs rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-0.5 text-white text-[10px] font-bold cursor-pointer"
-                >
-                  <Eye className="w-4 h-4 text-cyan-300" />
-                  <span className="leading-none text-[9.5px]">Detalles</span>
-                </button>
               </div>
             )}
           </div>
@@ -428,69 +408,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   : 'Comprar'}
               </span>
               <ChevronRight className={`w-3 h-3 opacity-80 shrink-0 ${stockUnits === 3 ? 'text-slate-950' : 'text-white'}`} />
-            </button>
-          </div>
-        </div>
-
-        {/* Subtle Animated Slide-Up Panel on Hover (Zero Card Expansion) */}
-        <div
-          className={`absolute inset-x-0 bottom-0 z-20 p-3 sm:p-3.5 rounded-b-2xl sm:rounded-b-3xl bg-white/95 dark:bg-[#0c1122]/98 backdrop-blur-xl border-t border-purple-500/30 dark:border-purple-500/40 shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col justify-between ${
-            isHovered
-              ? 'translate-y-0 opacity-100 pointer-events-auto'
-              : 'translate-y-[102%] opacity-0 pointer-events-none'
-          }`}
-          style={{
-            maxHeight: '84%',
-          }}
-        >
-          <div className="space-y-1.5 overflow-hidden">
-            {/* Drawer Grab Indicator & Category Spec */}
-            <div className="flex items-center justify-between gap-1 pb-1 border-b border-slate-200/70 dark:border-slate-800">
-              <span className="text-[9.5px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-purple-500 shrink-0" />
-                Características Clave
-              </span>
-              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/60 truncate max-w-[100px]">
-                {specs.resolution || 'Calidad Pro'}
-              </span>
-            </div>
-
-            {/* Key specs bullet list */}
-            <div className="space-y-1 text-[10.5px]">
-              <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 font-semibold leading-tight">
-                <Check className="w-3 h-3 text-emerald-500 shrink-0 stroke-[2.5]" />
-                <span className="truncate">{hasPin ? 'Perfil privado con PIN' : specs.accountType}</span>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 font-semibold leading-tight">
-                <ShieldCheck className="w-3 h-3 text-sky-500 shrink-0" />
-                <span className="truncate">{specs.renewal}</span>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 font-semibold leading-tight">
-                <Zap className="w-3 h-3 text-amber-500 shrink-0" />
-                <span className="truncate">Entrega en &lt;3 min por WhatsApp</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Drawer Actions */}
-          <div className="pt-2 mt-1 border-t border-slate-200/70 dark:border-slate-800 grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              onClick={handleQuickViewClick}
-              className="min-h-[32px] py-1 px-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
-            >
-              <Eye className="w-3 h-3 text-indigo-500" />
-              <span>Ver Más</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleBuyClick}
-              className="min-h-[32px] py-1 px-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[10px] font-black flex items-center justify-center gap-0.5 shadow-sm transition-all cursor-pointer active:scale-95"
-            >
-              <span>{selectedDuration.calculatedPrice}</span>
-              <ChevronRight className="w-3 h-3" />
             </button>
           </div>
         </div>

@@ -205,3 +205,11 @@
     animation: neon-pulse-glow 2.4s infinite ease-in-out;
   }
 }
+
+@media print {
+  .no-print,
+  [data-receipt-ignore="true"],
+  button {
+    display: none !important;
+  }
+}

@@ -297,7 +297,7 @@ export const AdminTextsTab: React.FC<AdminTextsTabProps> = ({
                 </label>
                 <textarea
                   rows={2}
-                  value={localSettings.heroDescription ?? 'Cuentas 100% privadas y renovables mes a mes con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.'}
+                  value={localSettings.heroDescription ?? 'Cuentas 100% privadas y renovables con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.'}
                   onChange={(e) => setLocalSettings({ ...localSettings, heroDescription: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 leading-relaxed"
                 />

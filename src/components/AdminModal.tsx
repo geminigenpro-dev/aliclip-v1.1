@@ -2317,6 +2317,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             <AdminSalesHistoryTab
               products={products}
               sales={sales || []}
+              storeName={brandSettings.name || 'AliClip Store'}
               onToast={onToast}
               onNavigateToRegister={() => setActiveTab('sales')}
             />
@@ -2329,6 +2330,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             <AdminSalesTab
               products={products}
               sales={sales || []}
+              storeName={brandSettings.name || 'AliClip Store'}
               onToast={onToast}
               onNavigateToHistory={() => setActiveTab('sales_history')}
             />
@@ -3272,7 +3274,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
                 <p className="text-[11px] text-slate-300 line-clamp-2 max-w-xl">
                   {brandSettings.heroDescription ||
-                    'Cuentas 100% privadas y renovables mes a mes con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.'}
+                    'Cuentas 100% privadas y renovables con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.'}
                 </p>
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <div className="px-3 py-1 rounded-lg bg-pink-600 text-white font-bold text-[10.5px]">
@@ -3364,7 +3366,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     rows={2}
                     value={
                       brandSettings.heroDescription ??
-                      'Cuentas 100% privadas y renovables mes a mes con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.'
+                      'Cuentas 100% privadas y renovables con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.'
                     }
                     onChange={(e) =>
                       setBrandSettings({ ...brandSettings, heroDescription: e.target.value })

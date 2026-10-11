@@ -20,7 +20,7 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     screens: '1 Usuario Exclusivo',
     accountType: 'Perfil Privado / Correo Oficial',
     devices: ['Web', 'iOS', 'Android', 'macOS App', 'Windows App'],
-    renewal: 'Renovable mes a mes sin perder tus chats ni historial',
+    renewal: 'Periodo contratado 100% garantizado sin perder chats ni historial',
     deliveryTime: 'Inmediata (< 3 minutos tras confirmación)',
     guarantee: 'Garantía total de reposición y soporte técnico activo',
     highlights: [
@@ -37,7 +37,7 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     screens: '1 Usuario Dedicado',
     accountType: 'Perfil Exclusivo de Alta Velocidad',
     devices: ['Navegador Web', 'iOS App', 'Android App'],
-    renewal: 'Renovación transparente con preservación de proyectos',
+    renewal: 'Periodo completo garantizado con preservación de proyectos',
     deliveryTime: 'Menos de 3 minutos por WhatsApp',
     guarantee: 'Garantía 100% durante todo el tiempo contratado',
     highlights: [
@@ -52,7 +52,7 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     screens: '1 Pantalla Privada con PIN Propio',
     accountType: 'Perfil Exclusivo con Bloqueo de 4 Dígitos',
     devices: ['Smart TV', 'TV Box / Firestick', 'Celulares', 'Tablets', 'PC / Mac'],
-    renewal: 'Renovación mensual en la misma cuenta sin perder listas',
+    renewal: 'Periodo contratado garantizado en la misma cuenta sin perder listas',
     deliveryTime: 'Entrega instantánea (< 2 minutos)',
     guarantee: 'Soporte y reemplazo inmediato ante cualquier bloqueo de hogar',
     highlights: [
@@ -68,7 +68,7 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     screens: '1 Usuario Pro',
     accountType: 'Activación directa en tu correo personal',
     devices: ['Web', 'Windows', 'Mac', 'Android', 'iPad & iPhone'],
-    renewal: 'Renovable de por vida con enlace oficial',
+    renewal: 'Periodo garantizado con enlace oficial a tu correo',
     deliveryTime: 'Automática en menos de 2 minutos',
     guarantee: 'Garantía total de diseño sin pérdida de plantillas',
     highlights: [
@@ -84,9 +84,9 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     screens: '1 Servidor Dedicado Fast GPU',
     accountType: 'Servidor Privado Discord',
     devices: ['Discord Desktop', 'Web Midjourney', 'Discord Móvil'],
-    renewal: 'Renovación continua con servidor propio',
+    renewal: 'Periodo completo garantizado con servidor propio',
     deliveryTime: 'Entrega en 3 minutos',
-    guarantee: 'Garantía activa durante todo el mes',
+    guarantee: 'Garantía activa durante todo el periodo contratado',
     highlights: [
       'Modo Fast GPU prioritario para generar imágenes en segundos',
       'Soporte completo para Midjourney V6.1 y modo Niji anime',
@@ -99,7 +99,7 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     screens: '1 Pantalla Privada con PIN',
     accountType: 'Perfil Individual con Código PIN',
     devices: ['Smart TV', 'Roku', 'Chromecast', 'Celulares', 'Consolas PS5/Xbox'],
-    renewal: 'Renovable mes a mes sin cortes',
+    renewal: 'Periodo contratado 100% garantizado sin cortes de señal',
     deliveryTime: 'Entrega ágil (< 3 minutos)',
     guarantee: 'Garantía total de servicio',
     highlights: [
@@ -114,7 +114,7 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     screens: '1 Dispositivo a la vez en tu propia cuenta',
     accountType: 'Activación en tu cuenta personal de Spotify',
     devices: ['Móvil iOS/Android', 'PC/Mac', 'Smart TV', 'Altavoces Alexa/Google'],
-    renewal: 'Renovable sin perder tus playlists ni me gustas',
+    renewal: 'Periodo completo garantizado sin perder tus playlists ni me gustas',
     deliveryTime: 'Entrega en 3 minutos por WhatsApp',
     guarantee: 'Garantía ante cualquier problema de membresía',
     highlights: [
@@ -129,7 +129,7 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     screens: '1 Pantalla Privada con PIN',
     accountType: 'Perfil Privado con PIN de 4 dígitos',
     devices: ['Smart TV', 'Fire TV', 'Android TV', 'Celulares', 'Laptops'],
-    renewal: 'Renovación mensual garantizada',
+    renewal: 'Periodo contratado garantizado con soporte y PIN propio',
     deliveryTime: 'Menos de 3 minutos',
     guarantee: 'Soporte prioritario y garantía activa',
     highlights: [
@@ -142,8 +142,8 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     resolution: '1080p Premium Bitrate & 4K 60fps',
     screens: 'Multi-dispositivo en tu propia cuenta Google',
     accountType: 'Activación por invitación a tu correo Gmail',
-    devices: ['Todos los dispositivos con tu cuenta de YouTube'],
-    renewal: 'Renovación mensual continua',
+    devices: ['Smart TV', 'PC / Mac', 'Celulares', 'Tablets'],
+    renewal: 'Periodo completo garantizado a tu propio correo Gmail',
     deliveryTime: 'Entrega en 3 minutos',
     guarantee: 'Garantía total de membresía',
     highlights: [
@@ -158,7 +158,7 @@ export const PRODUCT_SPECS_DATABASE: Record<string, ProductTechSpecs> = {
     screens: '1 Pantalla Privada con PIN',
     accountType: 'Perfil Personal con PIN',
     devices: ['Smart TV', 'Firestick', 'Celulares', 'Tablets', 'PC'],
-    renewal: 'Renovable mes a mes',
+    renewal: 'Periodo contratado 100% garantizado con perfil personal',
     deliveryTime: 'Entrega inmediata',
     guarantee: 'Garantía oficial AliClip',
     highlights: [
@@ -182,7 +182,7 @@ export function getProductSpecs(product: Product): ProductTechSpecs {
     screens: isStreaming ? '1 Pantalla Privada' : '1 Usuario Exclusivo',
     accountType: isStreaming ? 'Perfil Individual' : 'Cuenta con Licencia Activa',
     devices: ['Multiplataforma (PC, Móvil, TV y Web)'],
-    renewal: 'Renovable mes a mes con garantía de continuidad',
+    renewal: 'Periodo contratado 100% garantizado con reemplazo inmediato',
     deliveryTime: 'Entrega rápida en menos de 3 minutos por WhatsApp',
     guarantee: 'Garantía total de reposición durante el periodo contratado',
     highlights: [

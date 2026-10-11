@@ -46,10 +46,12 @@ import {
   downloadElementAsPdf,
   downloadElementAsPng,
 } from '../utils/receiptExporter';
+import { sendRegistrationNotification } from '../services/notificationService';
 
 import {
   validateCustomerName,
   validateCustomerEmail,
+  validatePhoneNumber,
   detectMaliciousPayload,
   sanitizeSingleLine,
 } from '../utils/securityValidator';
@@ -79,6 +81,7 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
   // Form input states
   const [clientInputName, setClientInputName] = useState('');
   const [clientInputEmail, setClientInputEmail] = useState('');
+  const [clientInputPhone, setClientInputPhone] = useState('');
   const [clientInputToken, setClientInputToken] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [authenticating, setAuthenticating] = useState(false);
@@ -104,9 +107,11 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
   // Expanded credentials cards
   const [expandedCredentials, setExpandedCredentials] = useState<Record<string, boolean>>({});
 
-  // Combine sales from prop with initial fallback
+  // Combine sales from prop with real store records, excluding test/demo seeds from client panel
   const salesPool = useMemo(() => {
-    return Array.isArray(sales) && sales.length > 0 ? sales : INITIAL_SALES;
+    const list = Array.isArray(sales) ? sales : [];
+    // Filter out initial demo/test sales (sale_1 to sale_7) from the customer panel
+    return list.filter((s) => !['sale_1', 'sale_2', 'sale_3', 'sale_4', 'sale_5', 'sale_6', 'sale_7'].includes(s.id));
   }, [sales]);
 
   // Load remembered customer session or initialQuery on open
@@ -182,9 +187,9 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
       }
     } catch (err: any) {
       console.warn('Google popup error (likely iframe or cookie security):', err);
-      // Fallback for preview iframe environment:
-      const fallbackEmail = 'gemini.genpro@gmail.com';
-      handleLookup(fallbackEmail, 'Usuario Google', '', true);
+      // Fallback for preview iframe environment without dummy email
+      const fallbackEmail = clientInputEmail.trim() || 'cliente@gmail.com';
+      handleLookup(fallbackEmail, clientInputName.trim() || 'Cliente VIP', '', true);
       onToast(`¡Cuenta de Google (${fallbackEmail}) vinculada a tu panel!`);
     } finally {
       setAuthenticating(false);
@@ -218,8 +223,39 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
       cleanName = emailVal.sanitized.split('@')[0];
     }
 
+    // Validación de WhatsApp / Teléfono si fue ingresado
+    let cleanPhone = '';
+    if (clientInputPhone.trim()) {
+      const phoneVal = validatePhoneNumber(clientInputPhone, 'WhatsApp');
+      if (!phoneVal.valid) {
+        onToast(`⚠️ ${phoneVal.error}`);
+        return;
+      }
+      cleanPhone = phoneVal.sanitized;
+    }
+
     handleLookup(emailVal.sanitized, cleanName, '', false);
-    onToast(`¡Sesión iniciada con: ${emailVal.sanitized}!`);
+
+    // Despacho de copia de registro con Nombre, Correo y WhatsApp para generar confianza
+    if (cleanPhone) {
+      sendRegistrationNotification(
+        {
+          name: cleanName,
+          email: emailVal.sanitized,
+          phone: cleanPhone,
+        },
+        settings.name || 'AliClip Store'
+      ).then((res) => {
+        if (res.waUrl) {
+          try {
+            window.open(res.waUrl, '_blank', 'noopener,noreferrer');
+          } catch {}
+        }
+      });
+      onToast(`¡Sesión iniciada! Se envió una copia de tu registro a ${emailVal.sanitized} y a tu WhatsApp (${cleanPhone}).`);
+    } else {
+      onToast(`¡Sesión iniciada con: ${emailVal.sanitized}!`);
+    }
   };
 
   // Token Direct Lookup Submit
@@ -531,20 +567,6 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
       margin-top: 4px;
       max-width: 360px;
     }
-    .no-print-bar {
-      margin-top: 20px;
-      text-align: center;
-    }
-    .btn-print {
-      background: ${invoiceColor};
-      color: #ffffff;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 12px;
-      font-weight: 800;
-      cursor: pointer;
-      font-size: 13px;
-    }
     @media print {
       body {
         background: #ffffff !important;
@@ -555,9 +577,6 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
         box-shadow: none !important;
         max-width: 100% !important;
         padding: 0 !important;
-      }
-      .no-print-bar {
-        display: none !important;
       }
     }
   </style>
@@ -886,42 +905,45 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                     />
                   )}
                 </div>
+              </div>
 
-                {/* Actions inside receipt */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200/50 dark:border-slate-800">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleDownloadReceiptPdf}
-                      disabled={exportingCustomerPdf}
-                      className="px-3.5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors text-rose-700 dark:text-rose-300 disabled:opacity-50 shadow-xs"
-                      title="Descargar comprobante oficial en formato PDF"
-                    >
-                      <FileText className="w-4 h-4 text-rose-500" />
-                      <span>{exportingCustomerPdf ? 'Generando PDF...' : 'Descargar PDF'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleDownloadReceiptPng}
-                      disabled={exportingCustomerPng}
-                      className="px-3.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/70 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors text-emerald-700 dark:text-emerald-300 disabled:opacity-50 shadow-xs"
-                      title="Descargar comprobante en imagen PNG de alta resolución"
-                    >
-                      <ImageIcon className="w-4 h-4 text-emerald-500" />
-                      <span>{exportingCustomerPng ? 'Generando PNG...' : 'Descargar PNG'}</span>
-                    </button>
-                  </div>
+              {/* Actions OUTSIDE receipt (Clean, professional export with zero buttons captured) */}
+              <div
+                data-receipt-ignore="true"
+                className="no-print p-4 rounded-2xl bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shadow-sm"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadReceiptPdf}
+                    disabled={exportingCustomerPdf}
+                    className="px-3.5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors text-rose-700 dark:text-rose-300 disabled:opacity-50 shadow-xs"
+                    title="Descargar comprobante oficial en formato PDF"
+                  >
+                    <FileText className="w-4 h-4 text-rose-500" />
+                    <span>{exportingCustomerPdf ? 'Generando PDF...' : 'Descargar PDF'}</span>
+                  </button>
 
                   <button
                     type="button"
-                    onClick={() => handleWhatsAppSupport(receiptSale)}
-                    className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black flex items-center gap-2 shadow-sm cursor-pointer transition-colors"
+                    onClick={handleDownloadReceiptPng}
+                    disabled={exportingCustomerPng}
+                    className="px-3.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/70 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors text-emerald-700 dark:text-emerald-300 disabled:opacity-50 shadow-xs"
+                    title="Descargar comprobante en imagen PNG de alta resolución"
                   >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Validar Garantía</span>
+                    <ImageIcon className="w-4 h-4 text-emerald-500" />
+                    <span>{exportingCustomerPng ? 'Generando PNG...' : 'Descargar PNG'}</span>
                   </button>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleWhatsAppSupport(receiptSale)}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black flex items-center gap-2 shadow-sm cursor-pointer transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Validar Garantía</span>
+                </button>
               </div>
             </div>
           ) : !verifiedQuery ? (
@@ -1059,10 +1081,38 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                             }
                             setClientInputEmail(val);
                           }}
-                          placeholder="ejemplo: renzo.silva@gmail.com"
+                          placeholder="tu.correo@gmail.com"
                           className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                        <span>WhatsApp / Teléfono:</span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copia automática por WhatsApp</span>
+                      </label>
+                      <div className="relative">
+                        <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="tel"
+                          value={clientInputPhone}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const check = detectMaliciousPayload(val);
+                            if (check.isMalicious) {
+                              onToast(`⚠️ Entrada rechazada: ${check.reason}`);
+                              return;
+                            }
+                            setClientInputPhone(val);
+                          }}
+                          placeholder="Ej: +51 987 654 321"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                        />
+                      </div>
+                      <p className="text-[10.5px] text-slate-400 dark:text-slate-500 mt-1 italic">
+                        🔒 Te enviaremos una copia de confirmación con tus datos a tu correo y a tu WhatsApp.
+                      </p>
                     </div>
 
                     <div className="flex items-center justify-between text-xs pt-1">
@@ -1108,7 +1158,7 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                           }
                           setClientInputToken(val);
                         }}
-                        placeholder="Ej: ALI-701, ALI-702, sale_1"
+                        placeholder="Ej: ALI-58291"
                         className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                       />
                     </div>
@@ -1124,46 +1174,10 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                 </form>
               )}
 
-              {/* Demo test chips for instant exploration */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">
-                  O prueba con estos accesos de demostración:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMode('google_email');
-                      setClientInputEmail('renzo.silva@gmail.com');
-                      handleLookup('renzo.silva@gmail.com', 'Renzo Silva', '', false);
-                    }}
-                    className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                  >
-                    ✉️ renzo.silva@gmail.com
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMode('google_email');
-                      setClientInputEmail('diego.dev@gmail.com');
-                      handleLookup('diego.dev@gmail.com', 'Diego Mendoza', '', false);
-                    }}
-                    className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                  >
-                    ✉️ diego.dev@gmail.com (Vence en 3 días)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMode('token_search');
-                      setClientInputToken('ALI-701');
-                      handleLookup('ALI-701', 'Renzo Silva', '', false);
-                    }}
-                    className="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-xs font-bold border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
-                  >
-                    🔑 Token ALI-701
-                  </button>
-                </div>
+              {/* Información de seguridad y privacidad del panel oficial */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>Tus datos de acceso y compras oficiales están protegidos con cifrado y garantía activa.</span>
               </div>
             </div>
           ) : (
@@ -1335,6 +1349,25 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                 </div>
               </div>
 
+              {/* Official Credentials Email Notification Banner */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/40 border border-indigo-200/80 dark:border-indigo-800/80 text-xs flex items-start gap-3 shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <h4 className="font-bold text-slate-900 dark:text-white text-xs">
+                    Envío Oficial de Datos de Acceso vía Correo Electrónico
+                  </h4>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Revisa tu bandeja de correo electrónico ({customerEmail ? <strong className="text-slate-900 dark:text-white font-mono">{customerEmail}</strong> : 'registrado en el panel'}), ya que el envío de tus datos de acceso se realizará vía correo electrónico directamente desde <strong className="text-indigo-600 dark:text-indigo-400">soporte@aliclip.site</strong> una vez confirmada la venta desde el panel admin.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[10.5px] pt-1 border-t border-indigo-200/60 dark:border-indigo-800/50 text-slate-500 dark:text-slate-400">
+                    <span>📬 Revisa también tu carpeta de spam o no deseados.</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">WhatsApp Oficial: +51967693595</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Memberships Cards List */}
               <div className="space-y-3.5">
                 {filteredRecords.length > 0 ? (
@@ -1449,7 +1482,7 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                         </div>
 
                         {/* Access Credentials & Delivery Data */}
-                        {(record.serviceCredentials || record.notes) && (
+                        {record.serviceCredentials || record.notes ? (
                           <div className="space-y-2">
                             <button
                               type="button"
@@ -1551,6 +1584,18 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                                 )}
                               </div>
                             )}
+                          </div>
+                        ) : (
+                          <div className="p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 text-xs flex items-start gap-2.5">
+                            <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <div className="space-y-0.5">
+                              <span className="font-bold text-amber-900 dark:text-amber-200 block text-[11px]">
+                                Despacho de Datos de Acceso vía Correo Electrónico
+                              </span>
+                              <p className="text-[10.5px] text-slate-600 dark:text-slate-400 leading-tight">
+                                Revisa tu bandeja de correo electrónico ({record.clientEmail || 'registrado en el panel'}), ya que el envío de tus datos de acceso se realizará vía correo electrónico registrado en el panel desde <strong className="text-slate-900 dark:text-white">soporte@aliclip.site</strong> una vez confirmada la venta desde el panel admin.
+                              </p>
+                            </div>
                           </div>
                         )}
 

@@ -326,11 +326,11 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
 
               <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
                 <div className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400">
-                  Renovación &amp; Continuidad:
+                  Periodo Contratado &amp; Garantía:
                 </div>
                 <div className="font-extrabold text-slate-900 dark:text-white mt-0.5 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>{specs.renewal}</span>
+                  <span>Garantía y soporte activo durante los {selectedDuration.label}</span>
                 </div>
               </div>
 

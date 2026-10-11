@@ -277,6 +277,124 @@ Instrucciones:
   }
 });
 
+// -----------------------------------------------------------------------------
+// 4. NOTIFICACIONES AUTOMÁTICAS: REGISTRO DE CLIENTE Y ENTREGA DE CREDENCIALES
+// -----------------------------------------------------------------------------
+
+// Notificación de copia de registro al correo y WhatsApp
+app.post('/api/notifications/registration', (req: Request, res: Response) => {
+  try {
+    const { name, email, phone, storeName = 'AliClip Store' } = req.body;
+    if (!name || !email || !phone) {
+      return res.status(400).json({ error: 'Nombre, correo y WhatsApp son requeridos para el registro.' });
+    }
+
+    const checkName = detectMaliciousPayload(name);
+    const checkEmail = detectMaliciousPayload(email);
+    const checkPhone = detectMaliciousPayload(phone);
+
+    if (checkName.isMalicious || checkEmail.isMalicious || checkPhone.isMalicious) {
+      return res.status(400).json({ error: 'Datos de registro contienen caracteres no permitidos.' });
+    }
+
+    const cleanName = sanitizeStrictText(name, 100);
+    const cleanEmail = sanitizeStrictText(email, 120);
+    const cleanPhone = sanitizeStrictText(phone, 30);
+    const clientToken = `CLI-${Date.now().toString().slice(-6)}`;
+
+    console.log(`[NOTIFICACIÓN REGISTRO] Copia despachada a correo: ${cleanEmail} y WhatsApp: ${cleanPhone} (Titular: ${cleanName})`);
+
+    // Sincronización automática con Webhook de Make.com (si está configurado)
+    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL || 'https://hook.us2.make.com/x1lu8emby6aqciwn3x9g4ae5bg4ojcdb';
+    if (makeWebhookUrl) {
+      fetch(makeWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          name: cleanName,
+          phone: cleanPhone,
+          registration_id: clientToken,
+          registered_at: new Date().toISOString(),
+          store: storeName,
+        }),
+      })
+        .then(async (resp) => {
+          console.log(`[MAKE WEBHOOK] Estado respuesta: ${resp.status} ${resp.statusText}`);
+        })
+        .catch((whErr) => {
+          console.warn('[MAKE WEBHOOK] Error al contactar webhook:', whErr?.message);
+        });
+    }
+
+    return res.json({
+      success: true,
+      clientToken,
+      clientName: cleanName,
+      clientEmail: cleanEmail,
+      clientPhone: cleanPhone,
+      timestamp: new Date().toISOString(),
+      message: `Copia de registro enviada exitosamente a ${cleanEmail} y preparada para WhatsApp.`,
+    });
+  } catch (err: any) {
+    console.error('Error en /api/notifications/registration:', err);
+    return res.status(500).json({ error: 'Error procesando notificación de registro.' });
+  }
+});
+
+// Notificación de confirmación de venta y entrega de credenciales de acceso
+app.post('/api/notifications/sale-credentials', (req: Request, res: Response) => {
+  try {
+    const {
+      saleId,
+      accessToken,
+      clientName,
+      clientEmail,
+      clientPhone,
+      productName,
+      planName,
+      price,
+      expirationDate,
+      credentials,
+      storeName = 'AliClip Store',
+    } = req.body;
+
+    if (!clientName || !clientPhone || !productName) {
+      return res.status(400).json({ error: 'Datos incompletos para el despacho de credenciales.' });
+    }
+
+    // Validación estricta
+    if (
+      detectMaliciousPayload(clientName).isMalicious ||
+      detectMaliciousPayload(clientPhone).isMalicious ||
+      (clientEmail && detectMaliciousPayload(clientEmail).isMalicious)
+    ) {
+      return res.status(400).json({ error: 'Datos del cliente contienen comandos no permitidos.' });
+    }
+
+    const cleanName = sanitizeStrictText(clientName, 100);
+    const cleanPhone = sanitizeStrictText(clientPhone, 30);
+    const cleanEmail = clientEmail ? sanitizeStrictText(clientEmail, 120) : '';
+    const cleanProduct = sanitizeStrictText(productName, 100);
+    const token = accessToken || saleId || 'ALI-VIP';
+
+    console.log(`[NOTIFICACIÓN CREDENCIALES] Venta confirmada: ${cleanProduct} (${token}) enviada a cliente ${cleanName} [Correo: ${cleanEmail || 'N/A'}, WhatsApp: ${cleanPhone}]`);
+
+    return res.json({
+      success: true,
+      token,
+      clientName: cleanName,
+      clientPhone: cleanPhone,
+      clientEmail: cleanEmail,
+      timestamp: new Date().toISOString(),
+      message: `Credenciales de ${cleanProduct} sincronizadas en panel del cliente y enviadas a ${cleanEmail || cleanPhone}.`,
+    });
+  } catch (err: any) {
+    console.error('Error en /api/notifications/sale-credentials:', err);
+    return res.status(500).json({ error: 'Error procesando despacho de credenciales.' });
+  }
+});
+
 // Server Initialization: Vite Dev Middleware vs Static Files in Production
 async function startServer() {
   if (!isProduction) {

@@ -20,20 +20,28 @@ import {
   Sparkles,
   ShieldCheck,
   ChevronRight,
+  Key,
+  Lock,
+  Send,
+  ExternalLink,
 } from 'lucide-react';
-import { Product, SaleRecord } from '../../types';
+import { Product, SaleRecord, ServiceCredentials } from '../../types';
 import { createSaleRecord, updateSaleStatus, deleteSaleRecord } from '../../services/storeService';
+import { sendSaleCredentialsNotification } from '../../services/notificationService';
+import { AdminCredentialsModal } from './AdminCredentialsModal';
 import {
   validateCustomerName,
   validatePhoneNumber,
   validateCustomerEmail,
   validateDescriptiveText,
   detectMaliciousPayload,
+  sanitizeStrictText,
 } from '../../utils/securityValidator';
 
 interface AdminSalesTabProps {
   products: Product[];
   sales: SaleRecord[];
+  storeName?: string;
   onToast: (msg: string) => void;
   onNavigateToHistory?: () => void;
 }
@@ -41,6 +49,7 @@ interface AdminSalesTabProps {
 export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
   products,
   sales,
+  storeName = 'AliClip Store',
   onToast,
   onNavigateToHistory,
 }) => {
@@ -59,6 +68,20 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
   const [autoDiscountStock, setAutoDiscountStock] = useState(true);
   const [notes, setNotes] = useState('');
   const [savingSale, setSavingSale] = useState(false);
+
+  // Datos de Acceso / Credenciales del Servicio
+  const [credEmail, setCredEmail] = useState('');
+  const [credPin, setCredPin] = useState('');
+  const [credProfile, setCredProfile] = useState('');
+  const [credDrive, setCredDrive] = useState('');
+  const [credInstructions, setCredInstructions] = useState('');
+
+  // Modales de Credenciales y Confirmación
+  const [editingCredentialsSale, setEditingCredentialsSale] = useState<SaleRecord | null>(null);
+  const [confirmedSaleModal, setConfirmedSaleModal] = useState<{
+    sale: SaleRecord;
+    waUrl: string;
+  } | null>(null);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,6 +173,16 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
 
     setSavingSale(true);
     try {
+      // Preparación de credenciales del servicio
+      const creds: ServiceCredentials = {};
+      if (credEmail.trim()) creds.email = sanitizeStrictText(credEmail.trim(), 120);
+      if (credPin.trim()) creds.pin = sanitizeStrictText(credPin.trim(), 50);
+      if (credProfile.trim()) creds.profileName = sanitizeStrictText(credProfile.trim(), 60);
+      if (credDrive.trim()) creds.driveLink = sanitizeStrictText(credDrive.trim(), 250);
+      if (credInstructions.trim()) creds.instructions = sanitizeStrictText(credInstructions.trim(), 500);
+
+      const hasCreds = Object.keys(creds).length > 0;
+
       const newSale = await createSaleRecord(
         {
           clientName: nameVal.sanitized,
@@ -166,20 +199,41 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
           expirationDate,
           status: 'activa',
           notes: notesVal.sanitized,
+          serviceCredentials: hasCreds ? creds : undefined,
         },
         autoDiscountStock
       );
 
+      // Despacho automático de copia con los datos de acceso/credenciales necesario al panel del cliente, correo y WhatsApp
+      let waUrl = '';
+      try {
+        const notifRes = await sendSaleCredentialsNotification(newSale, creds, storeName);
+        waUrl = notifRes.waUrl;
+        if (waUrl) {
+          try {
+            window.open(waUrl, '_blank', 'noopener,noreferrer');
+          } catch {}
+        }
+      } catch (notifErr) {
+        console.warn('Notification dispatch error:', notifErr);
+      }
+
+      setConfirmedSaleModal({ sale: newSale, waUrl });
+
+      const emailNote = safeEmail ? ` y al correo (${safeEmail})` : '';
       onToast(
-        `¡Venta confirmada para ${newSale.clientName}! ${
-          autoDiscountStock ? 'Stock descontado (-1 unid.).' : ''
-        }`
+        `¡Venta confirmada para ${newSale.clientName}! Credenciales sincronizadas en su panel y copia enviada a su WhatsApp (${newSale.clientPhone})${emailNote}.`
       );
 
       // Reset form fields
       setClientName('');
       setClientPhone('');
       setClientEmail('');
+      setCredEmail('');
+      setCredPin('');
+      setCredProfile('');
+      setCredDrive('');
+      setCredInstructions('');
       setNotes('');
     } catch (err) {
       console.error('Error confirming sale:', err);
@@ -420,8 +474,9 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10.5px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
-                WhatsApp / Teléfono *
+              <label className="block text-[10.5px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1 flex items-center justify-between">
+                <span>WhatsApp / Teléfono *</span>
+                <span className="text-[9.5px] text-emerald-500 font-bold lowercase">Copia automática</span>
               </label>
               <div className="relative">
                 <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -436,6 +491,26 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
               </div>
             </div>
 
+            <div>
+              <label className="block text-[10.5px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1 flex items-center justify-between">
+                <span>Correo Electrónico</span>
+                <span className="text-[9.5px] text-indigo-500 font-bold lowercase">Copia de credenciales</span>
+              </label>
+              <div className="relative">
+                <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  placeholder="cliente@ejemplo.com"
+                  className="w-full pl-8 pr-3 py-2 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Método de pago */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[10.5px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
                 Método de Pago Usado
@@ -452,6 +527,19 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
                 <option value="Binance Pay">Binance Pay (USDT)</option>
                 <option value="BBVA">BBVA</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-[10.5px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                Notas Internas / Referencia
+              </label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="ej: Pagó por Yape a las 3:15 PM"
+                className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+              />
             </div>
           </div>
 
@@ -509,7 +597,98 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
             </div>
           </div>
 
-          {/* Notas y Checkbox de Stock */}
+          {/* Credenciales de Acceso & Entrega Oficial (Sincronización Panel Cliente, Correo y WhatsApp) */}
+          <div className="p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-900/60 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Key className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h5 className="text-xs font-black text-slate-900 dark:text-white">
+                    Credenciales de Acceso &amp; Entrega del Servicio
+                  </h5>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Se sincronizan al instante en el Panel del Cliente ("Mis compras") y se envían a su Correo y WhatsApp al confirmar.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 shrink-0">
+                ⚡ Entrega Multi-Canal
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                  Usuario / Correo de Acceso
+                </label>
+                <input
+                  type="text"
+                  value={credEmail}
+                  onChange={(e) => setCredEmail(e.target.value)}
+                  placeholder="ej: cuenta@netflixvip.pe"
+                  className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                  Contraseña / PIN de Pantalla
+                </label>
+                <input
+                  type="text"
+                  value={credPin}
+                  onChange={(e) => setCredPin(e.target.value)}
+                  placeholder="ej: 4092 o Clave123"
+                  className="w-full px-2.5 py-1.5 text-xs font-mono font-bold tracking-wider rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                  Perfil Asignado
+                </label>
+                <input
+                  type="text"
+                  value={credProfile}
+                  onChange={(e) => setCredProfile(e.target.value)}
+                  placeholder="ej: Perfil 3 (Renzo)"
+                  className="w-full px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                  Enlace Drive / Material (Opcional)
+                </label>
+                <input
+                  type="url"
+                  value={credDrive}
+                  onChange={(e) => setCredDrive(e.target.value)}
+                  placeholder="https://drive.google.com/..."
+                  className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                  Instrucciones / Reglas de Uso
+                </label>
+                <input
+                  type="text"
+                  value={credInstructions}
+                  onChange={(e) => setCredInstructions(e.target.value)}
+                  placeholder="ej: No cambiar PIN ni contraseña. Usar en 1 pantalla."
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Checkbox de Stock y Botón Submit */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
             <div className="flex items-center gap-2">
               <input
@@ -527,10 +706,10 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
             <button
               type="submit"
               disabled={savingSale}
-              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 transition-all"
+              className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 hover:from-purple-500 hover:to-teal-500 text-white text-xs font-black rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 transition-all"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{savingSale ? 'Registrando...' : 'Confirmar Venta & Descontar Stock'}</span>
+              <Send className="w-4 h-4" />
+              <span>{savingSale ? 'Registrando y Despachando...' : 'Confirmar Venta & Despachar Credenciales'}</span>
             </button>
           </div>
         </form>
@@ -622,6 +801,29 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
                             ({sale.durationText})
                           </span>
                         </div>
+                        <div className="mt-1 flex items-center gap-1 flex-wrap">
+                          {sale.serviceCredentials ? (
+                            <button
+                              type="button"
+                              onClick={() => setEditingCredentialsSale(sale)}
+                              className="inline-flex items-center gap-1 text-[9.5px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-1.5 py-0.5 rounded-md border border-indigo-200/60 dark:border-indigo-800 cursor-pointer transition-colors"
+                              title="Ver o editar credenciales sincronizadas en el panel del cliente"
+                            >
+                              <Key className="w-2.5 h-2.5 text-indigo-500" />
+                              <span>Credenciales Activas</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setEditingCredentialsSale(sale)}
+                              className="inline-flex items-center gap-1 text-[9.5px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 hover:bg-amber-100 dark:hover:bg-amber-900/60 px-1.5 py-0.5 rounded-md border border-amber-200/60 dark:border-amber-800 cursor-pointer transition-colors"
+                              title="Asignar y despachar credenciales de acceso"
+                            >
+                              <Plus className="w-2.5 h-2.5 text-amber-500" />
+                              <span>Asignar Credenciales</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
 
                       {/* Monto */}
@@ -685,6 +887,14 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
+                            onClick={() => setEditingCredentialsSale(sale)}
+                            title="Credenciales de acceso (Ver / Editar / Enviar al Cliente)"
+                            className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 transition-colors cursor-pointer"
+                          >
+                            <Key className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleOpenWhatsApp(sale)}
                             title="Contactar al cliente por WhatsApp"
                             className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 dark:text-emerald-300 transition-colors cursor-pointer"
@@ -709,6 +919,90 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
           </div>
         )}
       </div>
+
+      {/* Modal de administración de credenciales */}
+      <AdminCredentialsModal
+        isOpen={Boolean(editingCredentialsSale)}
+        onClose={() => setEditingCredentialsSale(null)}
+        sale={editingCredentialsSale}
+        storeName={storeName}
+        onToast={onToast}
+      />
+
+      {/* Modal de confirmación de venta y resumen de despacho */}
+      {confirmedSaleModal && (
+        <div className="fixed inset-0 z-[125] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  ¡Venta Confirmada con Éxito!
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Credenciales listas y sincronizadas
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Cliente:</span>
+                <strong className="text-slate-900 dark:text-white">{confirmedSaleModal.sale.clientName}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Servicio:</span>
+                <strong className="text-indigo-600 dark:text-indigo-400">{confirmedSaleModal.sale.productName} ({confirmedSaleModal.sale.durationText})</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Vigencia:</span>
+                <span className="font-bold">{confirmedSaleModal.sale.expirationDate}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Código de Pedido:</span>
+                <span className="font-mono font-bold text-purple-600 dark:text-purple-400">{confirmedSaleModal.sale.accessToken || confirmedSaleModal.sale.id}</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40 text-[11px] text-emerald-900 dark:text-emerald-200 space-y-1.5">
+              <div className="flex items-center gap-1.5 font-black text-emerald-700 dark:text-emerald-300">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Entrega Multi-Canal Activada:</span>
+              </div>
+              <p className="text-slate-600 dark:text-slate-400 leading-tight">
+                ✅ <strong>Panel del Cliente:</strong> Las credenciales ya están activas en su cuenta de <em>"Mis compras"</em>.
+                <br />
+                ✅ <strong>Correo Registrado:</strong> Copia oficial despachada desde <strong>soporte@aliclip.site</strong> a {confirmedSaleModal.sale.clientEmail || 'correo vinculado'}.
+                <br />
+                ✅ <strong>WhatsApp (+51967693595 &rarr; {confirmedSaleModal.sale.clientPhone}):</strong> Mensaje preparado con enlace directo.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-1">
+              {confirmedSaleModal.waUrl && (
+                <a
+                  href={confirmedSaleModal.waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Abrir WhatsApp con Credenciales</span>
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => setConfirmedSaleModal(null)}
+                className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cerrar Notificación
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de confirmación para eliminar venta registrada */}
       {saleToDelete && (

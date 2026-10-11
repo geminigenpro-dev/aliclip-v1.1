@@ -20,15 +20,19 @@ import {
   TrendingUp,
   BarChart3,
   RefreshCw,
+  Key,
+  Plus,
 } from 'lucide-react';
 import { Product, SaleRecord } from '../../types';
 import { updateSaleStatus, deleteSaleRecord } from '../../services/storeService';
 import { sanitizeSearchQuery } from '../../utils/securityValidator';
 import { AdminSalesChart } from './AdminSalesChart';
+import { AdminCredentialsModal } from './AdminCredentialsModal';
 
 interface AdminSalesHistoryTabProps {
   products: Product[];
   sales: SaleRecord[];
+  storeName?: string;
   onToast: (msg: string) => void;
   onNavigateToRegister?: () => void;
 }
@@ -36,11 +40,15 @@ interface AdminSalesHistoryTabProps {
 export const AdminSalesHistoryTab: React.FC<AdminSalesHistoryTabProps> = ({
   products,
   sales,
+  storeName = 'AliClip Store',
   onToast,
   onNavigateToRegister,
 }) => {
   // Chart visibility
   const [showChart, setShowChart] = useState(true);
+
+  // Credentials management modal state
+  const [editingCredentialsSale, setEditingCredentialsSale] = useState<SaleRecord | null>(null);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -654,6 +662,29 @@ export const AdminSalesHistoryTab: React.FC<AdminSalesHistoryTabProps> = ({
                           {sale.durationText}
                         </span>
                       </div>
+                      <div className="mt-1 flex items-center gap-1 flex-wrap">
+                        {sale.serviceCredentials ? (
+                          <button
+                            type="button"
+                            onClick={() => setEditingCredentialsSale(sale)}
+                            className="inline-flex items-center gap-1 text-[9px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-1.5 py-0.5 rounded-md border border-indigo-200/60 dark:border-indigo-800 cursor-pointer transition-colors"
+                            title="Ver o editar credenciales sincronizadas en el panel del cliente"
+                          >
+                            <Key className="w-2.5 h-2.5 text-indigo-500" />
+                            <span>Credenciales Activas</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setEditingCredentialsSale(sale)}
+                            className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 hover:bg-amber-100 dark:hover:bg-amber-900/60 px-1.5 py-0.5 rounded-md border border-amber-200/60 dark:border-amber-800 cursor-pointer transition-colors"
+                            title="Asignar y despachar credenciales de acceso"
+                          >
+                            <Plus className="w-2.5 h-2.5 text-amber-500" />
+                            <span>Asignar Credenciales</span>
+                          </button>
+                        )}
+                      </div>
                       {sale.notes && (
                         <p className="text-[10px] text-slate-400 italic mt-1 line-clamp-1 max-w-[220px]">
                           "{sale.notes}"
@@ -726,6 +757,14 @@ export const AdminSalesHistoryTab: React.FC<AdminSalesHistoryTabProps> = ({
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
+                          onClick={() => setEditingCredentialsSale(sale)}
+                          title="Credenciales de acceso (Ver / Editar / Enviar al Cliente)"
+                          className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 transition-colors cursor-pointer"
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleOpenWhatsApp(sale)}
                           title="Contactar al cliente por WhatsApp"
                           className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 dark:text-emerald-300 transition-colors cursor-pointer"
@@ -749,6 +788,15 @@ export const AdminSalesHistoryTab: React.FC<AdminSalesHistoryTabProps> = ({
           </table>
         </div>
       )}
+
+      {/* Modal de administración de credenciales */}
+      <AdminCredentialsModal
+        isOpen={Boolean(editingCredentialsSale)}
+        onClose={() => setEditingCredentialsSale(null)}
+        sale={editingCredentialsSale}
+        storeName={storeName}
+        onToast={onToast}
+      />
 
       {/* Modal de confirmación para eliminar venta (sustituye window.confirm bloqueado en iframe) */}
       {saleToDelete && (

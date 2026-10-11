@@ -58,7 +58,7 @@ const INITIAL_REVIEWS: ReviewItem[] = [
     city: 'Arequipa, Perú',
     rating: 5,
     deliveryTime: '3 min',
-    text: 'Activé el Combo Cine 4K (Netflix + Disney+). Calidad Ultra HD impecable, pantalla totalmente privada con mi propio PIN. Llevo 5 meses renovando mes a mes con ellos y jamás he tenido un solo problema.',
+    text: 'Activé el Combo Cine 4K (Netflix + Disney+). Calidad Ultra HD impecable, pantalla totalmente privada con mi propio PIN. Llevo 5 meses renovando con ellos y jamás he tenido un solo problema.',
     productTag: 'Combo Cine 4K VIP',
     date: 'Hace 2 días',
     isVerifiedUser: true,

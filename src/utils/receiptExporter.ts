@@ -12,14 +12,59 @@ async function captureElementToPng(
   const pixelRatio = options?.pixelRatio ?? 2.5;
   const backgroundColor = options?.backgroundColor ?? '#ffffff';
 
-  // Always use skipFonts: true to prevent SecurityError when inspecting cross-origin stylesheets (e.g. Google Fonts)
-  // The browser natively renders the loaded fonts in the SVG foreignObject canvas anyway
-  return await toPng(element, {
-    pixelRatio,
-    backgroundColor,
-    skipFonts: true,
-    cacheBust: false,
+  // Temporarily hide all buttons, download toolbars and no-print elements during capture
+  const elementsToHide = Array.from(
+    element.querySelectorAll<HTMLElement>('button, .no-print, [data-receipt-ignore="true"]')
+  );
+  const externalIgnored = Array.from(
+    document.querySelectorAll<HTMLElement>('.no-print, [data-receipt-ignore="true"]')
+  );
+  const allIgnored = Array.from(new Set([...elementsToHide, ...externalIgnored]));
+  const originalDisplays = allIgnored.map((el) => el.style.display);
+
+  allIgnored.forEach((el) => {
+    el.style.display = 'none';
   });
+
+  try {
+    // Always use skipFonts: true to prevent SecurityError when inspecting cross-origin stylesheets (e.g. Google Fonts)
+    // The browser natively renders the loaded fonts in the SVG foreignObject canvas anyway
+    return await toPng(element, {
+      pixelRatio,
+      backgroundColor,
+      skipFonts: true,
+      cacheBust: false,
+      filter: (node: Node) => {
+        if (node instanceof HTMLElement) {
+          const tag = node.tagName.toLowerCase();
+          if (
+            tag === 'button' ||
+            node.classList.contains('no-print') ||
+            node.getAttribute('data-receipt-ignore') === 'true' ||
+            node.closest('button') ||
+            node.closest('.no-print') ||
+            node.closest('[data-receipt-ignore="true"]')
+          ) {
+            return false;
+          }
+        } else if (node.parentElement) {
+          if (
+            node.parentElement.closest('button') ||
+            node.parentElement.closest('.no-print') ||
+            node.parentElement.closest('[data-receipt-ignore="true"]')
+          ) {
+            return false;
+          }
+        }
+        return true;
+      },
+    });
+  } finally {
+    // Restore original display styles
+    allIgnored.forEach((el, i) => {
+      el.style.display = originalDisplays[i];
+    });
+  }
 }
 
 /**

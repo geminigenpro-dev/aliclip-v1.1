@@ -17,6 +17,7 @@ import {
   Claim,
   PaymentMethod,
   SaleRecord,
+  ServiceCredentials,
   BenefitsTickerItemSetting,
   FaqItemSetting,
   AdminSectionConfig,
@@ -754,7 +755,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   heroTitleHighlight: 'PREMIUM',
   heroTitleSuffix: 'al Mejor Precio',
   heroDescription:
-    'Cuentas 100% privadas y renovables mes a mes con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.',
+    'Cuentas 100% privadas y renovables con activación inmediata por WhatsApp, garantía de reposición total y soporte técnico 24/7 en Perú.',
   heroRatingScore: '4.9 / 5.0',
   heroRatingText: '+15,000 Clientes en Perú',
   heroCtaText: 'Explorar Catálogo',
@@ -1305,13 +1306,7 @@ export const INITIAL_SALES: SaleRecord[] = [
     activationDate: new Date().toISOString().split('T')[0], // Hoy
     expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
-    notes: 'Activación inmediata por WhatsApp.',
-    serviceCredentials: {
-      email: 'renzo.vip@alixperu.com',
-      pin: '4821',
-      profileName: 'Perfil Renzo VIP',
-      instructions: 'Ingresar con el correo indicado en ChatGPT y seleccionar tu perfil exclusivo con PIN.',
-    },
+    notes: 'Activación coordinada por WhatsApp.',
     createdAt: new Date().toISOString(),
   },
   {
@@ -1330,13 +1325,7 @@ export const INITIAL_SALES: SaleRecord[] = [
     activationDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Hace 3 días
     expirationDate: new Date(Date.now() + 87 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
-    notes: 'Cliente frecuente, pantalla 3.',
-    serviceCredentials: {
-      email: 'netflix.fam49@alixstream.com',
-      pin: '1092',
-      profileName: 'Pantalla 3 - Camila',
-      instructions: 'Usar perfil 3 con PIN 1092. Válido en TV, Smartphone o Laptop sin caídas.',
-    },
+    notes: 'Cliente frecuente.',
     createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -1356,10 +1345,6 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Vence en 3 días
     status: 'por_vencer',
     notes: 'Programador front-end, recordarle renovación.',
-    serviceCredentials: {
-      email: 'diego.mendoza.pro@gmail.com',
-      instructions: 'Cuenta activada a tu correo personal de Claude.ai. Renovación automática disponible.',
-    },
     createdAt: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -1379,10 +1364,6 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 350 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Activada a su correo personal.',
-    serviceCredentials: {
-      email: 'lucia.design@outlook.com',
-      instructions: 'Invitación a equipo Canva Pro aceptada. Acceso a Brand Kit y exportación en alta calidad.',
-    },
     createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -1402,11 +1383,6 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Vencida
     status: 'vencida',
     notes: 'Enviado recordatorio para nueva recarga.',
-    serviceCredentials: {
-      email: 'disney.premium98@alixperu.com',
-      profileName: 'Perfil Carlos',
-      instructions: 'Suscripción mensual vencida. Puedes reactivar el mismo perfil desde WhatsApp.',
-    },
     createdAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -1426,10 +1402,6 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Activada en Discord personal.',
-    serviceCredentials: {
-      email: 'mariana.art@gmail.com',
-      instructions: 'Bot de Midjourney añadido a tu servidor privado de Discord. Horas Fast listas para usar.',
-    },
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -1449,12 +1421,6 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 84 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Uso intensivo para tesis de ingeniería.',
-    serviceCredentials: {
-      email: 'jorge.tesis@alixai.net',
-      pin: '7721',
-      profileName: 'Perfil Jorge',
-      instructions: 'Acceso completo con GPT-4o, Canvas y generación ilimitada.',
-    },
     createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -1474,12 +1440,6 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 29 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Smart TV Samsung salón principal.',
-    serviceCredentials: {
-      email: 'netflix.peru24@alixstream.com',
-      pin: '3399',
-      profileName: 'Pantalla 4 - Vale',
-      instructions: 'Perfil 4 con PIN 3399. Calidad 4K UHD garantizada.',
-    },
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -1499,10 +1459,6 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 82 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Plan familiar compartido con su correo.',
-    serviceCredentials: {
-      email: 'andres.musica@gmail.com',
-      instructions: 'Vinculado a tu cuenta de Spotify mediante invitación familiar permanente.',
-    },
     createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -1522,10 +1478,6 @@ export const INITIAL_SALES: SaleRecord[] = [
     expirationDate: new Date(Date.now() + 26 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'activa',
     notes: 'Kit de marca y fuentes Pro activas.',
-    serviceCredentials: {
-      email: 'sandra.h@gmail.com',
-      instructions: 'Canva Pro activado para tu correo de diseñador.',
-    },
     createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
@@ -1833,6 +1785,44 @@ export async function updateSaleStatus(
   const docRef = doc(db, SALES_COLLECTION, saleId);
   try {
     await updateDoc(docRef, { status });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `${SALES_COLLECTION}/${saleId}`);
+    throw error;
+  }
+}
+
+/**
+ * Updates access credentials, status and notes of a sale record in Firestore and local state
+ */
+export async function updateSaleCredentials(
+  saleId: string,
+  serviceCredentials: ServiceCredentials,
+  newStatus?: 'activa' | 'por_vencer' | 'vencida',
+  notes?: string
+): Promise<void> {
+  const updatePayload: Record<string, any> = { serviceCredentials };
+  if (newStatus) updatePayload.status = newStatus;
+  if (notes !== undefined) updatePayload.notes = notes;
+
+  // 1. Update in local storage
+  try {
+    const raw = localStorage.getItem('alixplay_custom_sales');
+    if (raw) {
+      const sales: SaleRecord[] = JSON.parse(raw);
+      const idx = sales.findIndex((s) => s.id === saleId);
+      if (idx !== -1) {
+        sales[idx] = { ...sales[idx], ...updatePayload };
+        localStorage.setItem('alixplay_custom_sales', JSON.stringify(sales));
+      }
+    }
+  } catch (err) {
+    console.warn('Local sale credentials update warning:', err);
+  }
+
+  // 2. Update in Firestore
+  const docRef = doc(db, SALES_COLLECTION, saleId);
+  try {
+    await updateDoc(docRef, updatePayload);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${SALES_COLLECTION}/${saleId}`);
     throw error;
