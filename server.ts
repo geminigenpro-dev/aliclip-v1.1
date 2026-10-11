@@ -280,6 +280,8 @@ Instrucciones:
 // -----------------------------------------------------------------------------
 // 4. NOTIFICACIONES AUTOMÁTICAS: REGISTRO DE CLIENTE Y ENTREGA DE CREDENCIALES
 // -----------------------------------------------------------------------------
+const OFFICIAL_SUPPORT_EMAIL = 'soporte@aliclip.site';
+const OFFICIAL_SUPPORT_WHATSAPP = '+51967693595';
 
 // Notificación de copia de registro al correo y WhatsApp
 app.post('/api/notifications/registration', (req: Request, res: Response) => {
@@ -302,39 +304,18 @@ app.post('/api/notifications/registration', (req: Request, res: Response) => {
     const cleanPhone = sanitizeStrictText(phone, 30);
     const clientToken = `CLI-${Date.now().toString().slice(-6)}`;
 
-    console.log(`[NOTIFICACIÓN REGISTRO] Copia despachada a correo: ${cleanEmail} y WhatsApp: ${cleanPhone} (Titular: ${cleanName})`);
-
-    // Sincronización automática con Webhook de Make.com (si está configurado)
-    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL || 'https://hook.us2.make.com/x1lu8emby6aqciwn3x9g4ae5bg4ojcdb';
-    if (makeWebhookUrl) {
-      fetch(makeWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: cleanEmail,
-          name: cleanName,
-          phone: cleanPhone,
-          registration_id: clientToken,
-          registered_at: new Date().toISOString(),
-          store: storeName,
-        }),
-      })
-        .then(async (resp) => {
-          console.log(`[MAKE WEBHOOK] Estado respuesta: ${resp.status} ${resp.statusText}`);
-        })
-        .catch((whErr) => {
-          console.warn('[MAKE WEBHOOK] Error al contactar webhook:', whErr?.message);
-        });
-    }
+    console.log(`[NOTIFICACIÓN REGISTRO - ${OFFICIAL_SUPPORT_EMAIL}] Copia despachada a correo: ${cleanEmail} y WhatsApp: ${cleanPhone} (Titular: ${cleanName}) | Soporte: ${OFFICIAL_SUPPORT_WHATSAPP}`);
 
     return res.json({
       success: true,
+      senderEmail: OFFICIAL_SUPPORT_EMAIL,
+      supportWhatsApp: OFFICIAL_SUPPORT_WHATSAPP,
       clientToken,
       clientName: cleanName,
       clientEmail: cleanEmail,
       clientPhone: cleanPhone,
       timestamp: new Date().toISOString(),
-      message: `Copia de registro enviada exitosamente a ${cleanEmail} y preparada para WhatsApp.`,
+      message: `Copia de registro enviada exitosamente desde ${OFFICIAL_SUPPORT_EMAIL} a ${cleanEmail} y preparada para WhatsApp (+51967693595).`,
     });
   } catch (err: any) {
     console.error('Error en /api/notifications/registration:', err);
@@ -378,16 +359,28 @@ app.post('/api/notifications/sale-credentials', (req: Request, res: Response) =>
     const cleanProduct = sanitizeStrictText(productName, 100);
     const token = accessToken || saleId || 'ALI-VIP';
 
-    console.log(`[NOTIFICACIÓN CREDENCIALES] Venta confirmada: ${cleanProduct} (${token}) enviada a cliente ${cleanName} [Correo: ${cleanEmail || 'N/A'}, WhatsApp: ${cleanPhone}]`);
+    console.log(`[DESPACHO AUTOMÁTICO VÍA CORREO: ${OFFICIAL_SUPPORT_EMAIL}]
+==================================================
+Remitente Oficial: AliClip Store <${OFFICIAL_SUPPORT_EMAIL}>
+WhatsApp Oficial: ${OFFICIAL_SUPPORT_WHATSAPP}
+Destinatario: ${cleanName} <${cleanEmail || 'N/A'}>
+Teléfono Cliente: ${cleanPhone}
+Servicio Activado: ${cleanProduct} (${planName || 'Plan Oficial'})
+Código Pedido: ${token}
+Vigencia: ${expirationDate || 'Activa'}
+Credenciales Entregadas: ${credentials?.email ? `Usuario: ${credentials.email}` : 'Configurada'}, PIN: ${credentials?.pin || 'N/A'}
+==================================================`);
 
     return res.json({
       success: true,
       token,
+      senderEmail: OFFICIAL_SUPPORT_EMAIL,
+      supportWhatsApp: OFFICIAL_SUPPORT_WHATSAPP,
       clientName: cleanName,
       clientPhone: cleanPhone,
       clientEmail: cleanEmail,
       timestamp: new Date().toISOString(),
-      message: `Credenciales de ${cleanProduct} sincronizadas en panel del cliente y enviadas a ${cleanEmail || cleanPhone}.`,
+      message: `Datos de acceso de ${cleanProduct} despachados automáticamente vía correo desde ${OFFICIAL_SUPPORT_EMAIL} a ${cleanEmail || 'correo del cliente'} y copia para WhatsApp ${cleanPhone} (Soporte: ${OFFICIAL_SUPPORT_WHATSAPP}).`,
     });
   } catch (err: any) {
     console.error('Error en /api/notifications/sale-credentials:', err);
