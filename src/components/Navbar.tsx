@@ -17,9 +17,11 @@ import {
   GraduationCap,
   Layers,
   ShoppingBag,
+  User,
 } from 'lucide-react';
 import { StoreSettings } from '../types';
 import { sanitizeSearchQuery } from '../utils/securityValidator';
+import { useAuth } from '../hooks/useAuth';
 
 interface NavbarProps {
   settings: StoreSettings;
@@ -53,6 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectCategory,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user: customerUser, logout: customerLogout } = useAuth();
   const isDark = theme === 'dark';
   const waUrl = `https://wa.me/${settings.whatsappNumber}?text=${encodeURIComponent(
     `Hola ${settings.name}${settings.suffix}, deseo consultar por una membresía`
@@ -281,17 +284,48 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Actions */}
             <div className="flex items-center gap-1.5 sm:gap-2">
-              {/* Mis Compras Desktop Button */}
+              {/* Customer Account & Purchases Desktop Button */}
               {onOpenMyPurchases && (
-                <button
-                  type="button"
-                  onClick={onOpenMyPurchases}
-                  className="hidden sm:inline-flex px-3 py-1.5 rounded-xl text-xs font-black text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-200 bg-indigo-50/90 hover:bg-indigo-100/90 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/70 border border-indigo-200/90 dark:border-indigo-800/80 transition-all items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
-                  title="Consultar historial de compras, membresías y cuentas"
-                >
-                  <ShoppingBag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Mis Compras</span>
-                </button>
+                customerUser ? (
+                  <div className="hidden sm:flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={onOpenMyPurchases}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-black text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-200 bg-indigo-50/90 hover:bg-indigo-100/90 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/70 border border-indigo-200/90 dark:border-indigo-800/80 transition-all items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                      title={`Sesión iniciada con Firebase Auth (${customerUser.email}). Clic para ver tus pedidos.`}
+                    >
+                      <div className="w-5 h-5 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                        {customerUser.displayName ? customerUser.displayName.charAt(0).toUpperCase() : '✓'}
+                      </div>
+                      <span className="truncate max-w-[100px]">
+                        {customerUser.displayName || customerUser.email?.split('@')[0] || 'Mi Cuenta'}
+                      </span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Sesión Activa" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await customerLogout();
+                        } catch {}
+                      }}
+                      className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs transition-colors cursor-pointer"
+                      title="Cerrar sesión"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onOpenMyPurchases}
+                    className="hidden sm:inline-flex px-3 py-1.5 rounded-xl text-xs font-black text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-200 bg-indigo-50/90 hover:bg-indigo-100/90 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/70 border border-indigo-200/90 dark:border-indigo-800/80 transition-all items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                    title="Iniciar sesión o registrarse para ver tus compras y credenciales"
+                  >
+                    <User className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Iniciar Sesión</span>
+                  </button>
+                )
               )}
 
               {/* Dark Mode Theme Toggle Button */}
@@ -406,29 +440,68 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Grid of Navigation Items */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {onOpenMyPurchases && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      onOpenMyPurchases();
-                    }}
-                    className="flex items-center gap-3 p-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-800/90 bg-indigo-50/80 dark:bg-indigo-950/50 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-all group cursor-pointer text-left sm:col-span-2 shadow-2xs"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                      <ShoppingBag className="w-4 h-4 text-white" />
+                  customerUser ? (
+                    <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-800/90 bg-indigo-50/80 dark:bg-indigo-950/50 sm:col-span-2 shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          onOpenMyPurchases();
+                        }}
+                        className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                          {customerUser.displayName ? customerUser.displayName.charAt(0).toUpperCase() : '✓'}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-black text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                            <span className="truncate">{customerUser.displayName || 'Mi Cuenta'}</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                          </div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                            {customerUser.email}
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setMobileMenuOpen(false);
+                          try {
+                            await customerLogout();
+                          } catch {}
+                        }}
+                        className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs shrink-0 cursor-pointer"
+                        title="Cerrar sesión"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
-                        <span>Mis Compras & Membresías</span>
-                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-indigo-200/60 dark:bg-indigo-800/60 text-indigo-800 dark:text-indigo-200 font-bold">
-                          Portal Clientes
-                        </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onOpenMyPurchases();
+                      }}
+                      className="flex items-center gap-3 p-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-800/90 bg-indigo-50/80 dark:bg-indigo-950/50 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-all group cursor-pointer text-left sm:col-span-2 shadow-2xs"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                        <User className="w-4 h-4 text-white" />
                       </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                        Ver cuentas activas, días restantes, credenciales y comprobantes
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+                          <span>Iniciar Sesión / Registrarse</span>
+                          <span className="px-1.5 py-0.2 rounded text-[9px] bg-indigo-200/60 dark:bg-indigo-800/60 text-indigo-800 dark:text-indigo-200 font-bold">
+                            Portal Clientes
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                          Accede a tus credenciales, cuentas activas y comprobantes
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                  )
                 )}
 
                 {isSectionEnabled('heroCarousel') && (

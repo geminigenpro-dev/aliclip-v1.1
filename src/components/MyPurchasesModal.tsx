@@ -36,11 +36,26 @@ import {
   Building2,
   CheckSquare,
   Image as ImageIcon,
+  Eye,
+  EyeOff,
+  UserPlus,
+  LogIn,
+  KeyRound,
 } from 'lucide-react';
 import { SaleRecord, StoreSettings } from '../types';
 import { queryCustomerPurchases, INITIAL_SALES } from '../services/storeService';
-import { auth, googleProvider } from '../firebase';
-import { signInWithPopup, signOut as fbSignOut } from 'firebase/auth';
+import {
+  auth,
+  googleProvider,
+  signInWithPopup,
+  signOut as fbSignOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+  sendPasswordResetEmail,
+  getFirebaseAuthErrorMessage,
+} from '../firebase';
+import { useAuth } from '../hooks/useAuth';
 import { ReceiptQrCode } from './ReceiptQrCode';
 import {
   downloadElementAsPdf,
@@ -52,6 +67,7 @@ import {
   validateCustomerName,
   validateCustomerEmail,
   validatePhoneNumber,
+  validatePassword,
   detectMaliciousPayload,
   sanitizeSingleLine,
 } from '../utils/securityValidator';
@@ -75,16 +91,35 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const { user: authUser, logout: authLogout } = useAuth();
+
   // Active authentication mode: 'login' | 'register' | 'token_search'
-  const [authMode, setAuthMode] = useState<'google_email' | 'token_search'>('google_email');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'token_search'>('login');
   
-  // Form input states
-  const [clientInputName, setClientInputName] = useState('');
-  const [clientInputEmail, setClientInputEmail] = useState('');
-  const [clientInputPhone, setClientInputPhone] = useState('');
+  // Login form states
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+
+  // Register form states
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+
+  // Token direct search state
   const [clientInputToken, setClientInputToken] = useState('');
+
+  // General auth & feedback states
   const [rememberMe, setRememberMe] = useState(true);
   const [authenticating, setAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [sendingReset, setSendingReset] = useState(false);
 
   // Active verified customer identity
   const [verifiedQuery, setVerifiedQuery] = useState<string>('');
@@ -113,31 +148,6 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
     // Filter out initial demo/test sales (sale_1 to sale_7) from the customer panel
     return list.filter((s) => !['sale_1', 'sale_2', 'sale_3', 'sale_4', 'sale_5', 'sale_6', 'sale_7'].includes(s.id));
   }, [sales]);
-
-  // Load remembered customer session or initialQuery on open
-  useEffect(() => {
-    if (initialQuery.trim()) {
-      handleLookup(initialQuery.trim());
-      return;
-    }
-
-    try {
-      const savedSession = localStorage.getItem('alix_customer_session');
-      if (savedSession) {
-        const parsed = JSON.parse(savedSession);
-        if (parsed.email || parsed.query) {
-          const q = parsed.email || parsed.query;
-          setVerifiedQuery(q);
-          setCustomerEmail(q);
-          setCustomerName(parsed.name || 'Cliente AliClip');
-          setCustomerPhoto(parsed.photo || '');
-          setIsGoogleLinked(parsed.isGoogle || false);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, [initialQuery]);
 
   // Execute lookup logic
   const handleLookup = (queryToSearch: string, fallbackName?: string, photoUrl?: string, googleAuth = false) => {
@@ -173,9 +183,37 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
     }
   };
 
-  // Google / Gmail Authentication
+  // Load remembered customer session, initialQuery, or official Firebase Auth user
+  useEffect(() => {
+    if (initialQuery.trim()) {
+      handleLookup(initialQuery.trim());
+      return;
+    }
+
+    // Si hay un usuario autenticado con Firebase Auth en sesión persistida
+    if (authUser && authUser.email) {
+      const email = authUser.email.toLowerCase();
+      const name = authUser.displayName || email.split('@')[0] || 'Cliente VIP';
+      const photo = authUser.photoURL || '';
+      const isGoogle = authUser.providerData.some((p) => p.providerId === 'google.com');
+      handleLookup(email, name, photo, isGoogle);
+      return;
+    }
+
+    // Si no hay usuario autenticado y tampoco initialQuery, mantener estado no autenticado (pantalla de login/registro)
+    if (!authUser && !initialQuery.trim()) {
+      setVerifiedQuery('');
+      setCustomerEmail('');
+      setCustomerName('');
+      setCustomerPhoto('');
+      setIsGoogleLinked(false);
+    }
+  }, [initialQuery, authUser]);
+
+  // Google / Gmail Authentication Oficial
   const handleGoogleSignIn = async () => {
     setAuthenticating(true);
+    setAuthError(null);
     try {
       const res = await signInWithPopup(auth, googleProvider);
       if (res.user && res.user.email) {
@@ -183,78 +221,179 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
         const name = res.user.displayName || 'Cliente Google';
         const photo = res.user.photoURL || '';
         handleLookup(email, name, photo, true);
-        onToast(`¡Cuenta de Google vinculada con éxito (${email})!`);
+        onToast(`¡Cuenta de Google (${email}) vinculada con éxito!`);
       }
     } catch (err: any) {
-      console.warn('Google popup error (likely iframe or cookie security):', err);
-      // Fallback for preview iframe environment without dummy email
-      const fallbackEmail = clientInputEmail.trim() || 'cliente@gmail.com';
-      handleLookup(fallbackEmail, clientInputName.trim() || 'Cliente VIP', '', true);
-      onToast(`¡Cuenta de Google (${fallbackEmail}) vinculada a tu panel!`);
+      console.warn('Google popup error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setAuthError('Se cerró la ventana de inicio de sesión con Google.');
+      } else {
+        const msg = getFirebaseAuthErrorMessage(err);
+        setAuthError(msg);
+        onToast(`⚠️ ${msg}`);
+      }
     } finally {
       setAuthenticating(false);
     }
   };
 
-  // Email Registration / Login Submit
-  const handleEmailAuthSubmit = (e: React.FormEvent) => {
+  // 1. INICIAR SESIÓN CON CORREO Y CONTRASEÑA (Firebase Authentication)
+  const handleEmailLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientInputEmail.trim()) {
-      onToast('Por favor ingresa tu correo electrónico.');
-      return;
-    }
+    setAuthError(null);
+    setAuthSuccessMsg(null);
 
-    // Validación estricta contra comandos o inyecciones
-    const emailVal = validateCustomerEmail(clientInputEmail, 'Correo electrónico');
+    const emailVal = validateCustomerEmail(loginEmail, 'Correo electrónico');
     if (!emailVal.valid) {
+      setAuthError(emailVal.error || 'Correo inválido');
       onToast(`⚠️ ${emailVal.error}`);
       return;
     }
 
-    let cleanName = '';
-    if (clientInputName.trim()) {
-      const nameVal = validateCustomerName(clientInputName, 'Nombre');
-      if (!nameVal.valid) {
-        onToast(`⚠️ ${nameVal.error}`);
-        return;
-      }
-      cleanName = nameVal.sanitized;
-    } else {
-      cleanName = emailVal.sanitized.split('@')[0];
+    const passVal = validatePassword(loginPassword, 'Contraseña');
+    if (!passVal.valid) {
+      setAuthError(passVal.error || 'Contraseña inválida');
+      onToast(`⚠️ ${passVal.error}`);
+      return;
     }
 
-    // Validación de WhatsApp / Teléfono si fue ingresado
+    setAuthenticating(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        emailVal.sanitized,
+        loginPassword
+      );
+      const user = userCredential.user;
+      const name = user.displayName || emailVal.sanitized.split('@')[0] || 'Cliente VIP';
+      handleLookup(emailVal.sanitized, name, user.photoURL || '', false);
+      setLoginPassword('');
+      onToast(`¡Bienvenido de nuevo, ${name}!`);
+    } catch (err: any) {
+      console.warn('Login error:', err);
+      const friendlyMsg = getFirebaseAuthErrorMessage(err);
+      setAuthError(friendlyMsg);
+      onToast(`⚠️ ${friendlyMsg}`);
+    } finally {
+      setAuthenticating(false);
+    }
+  };
+
+  // 2. REGISTRO OFICIAL CON CORREO Y CONTRASEÑA (Firebase Authentication)
+  const handleEmailRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthSuccessMsg(null);
+
+    const nameVal = validateCustomerName(regName, 'Nombre completo');
+    if (!nameVal.valid) {
+      setAuthError(nameVal.error || 'Nombre inválido');
+      onToast(`⚠️ ${nameVal.error}`);
+      return;
+    }
+
+    const emailVal = validateCustomerEmail(regEmail, 'Correo electrónico');
+    if (!emailVal.valid) {
+      setAuthError(emailVal.error || 'Correo inválido');
+      onToast(`⚠️ ${emailVal.error}`);
+      return;
+    }
+
+    const passVal = validatePassword(regPassword, 'Contraseña');
+    if (!passVal.valid) {
+      setAuthError(passVal.error || 'Contraseña inválida');
+      onToast(`⚠️ ${passVal.error}`);
+      return;
+    }
+
+    if (regPassword !== regConfirmPassword) {
+      const errMismatch = 'Las contraseñas no coinciden. Por favor, asegúrate de escribirlas idénticas.';
+      setAuthError(errMismatch);
+      onToast(`⚠️ ${errMismatch}`);
+      return;
+    }
+
     let cleanPhone = '';
-    if (clientInputPhone.trim()) {
-      const phoneVal = validatePhoneNumber(clientInputPhone, 'WhatsApp');
+    if (regPhone.trim()) {
+      const phoneVal = validatePhoneNumber(regPhone, 'WhatsApp');
       if (!phoneVal.valid) {
+        setAuthError(phoneVal.error || 'Teléfono inválido');
         onToast(`⚠️ ${phoneVal.error}`);
         return;
       }
       cleanPhone = phoneVal.sanitized;
     }
 
-    handleLookup(emailVal.sanitized, cleanName, '', false);
+    setAuthenticating(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        emailVal.sanitized,
+        regPassword
+      );
+      const user = userCredential.user;
 
-    // Despacho de copia de registro con Nombre, Correo y WhatsApp para generar confianza
-    if (cleanPhone) {
-      sendRegistrationNotification(
-        {
-          name: cleanName,
-          email: emailVal.sanitized,
-          phone: cleanPhone,
-        },
-        settings.name || 'AliClip Store'
-      ).then((res) => {
-        if (res.waUrl) {
+      // Actualizar nombre visible oficial en Firebase Auth
+      await updateProfile(user, { displayName: nameVal.sanitized }).catch(() => {});
+
+      handleLookup(emailVal.sanitized, nameVal.sanitized, '', false);
+      setCustomerPhone(cleanPhone);
+
+      // Despacho automático de copia de registro al correo y WhatsApp para generar confianza
+      try {
+        const notifRes = await sendRegistrationNotification(
+          {
+            name: nameVal.sanitized,
+            email: emailVal.sanitized,
+            phone: cleanPhone || settings.whatsappDisplay,
+          },
+          settings.name || 'AliClip Store'
+        );
+        if (cleanPhone && notifRes.waUrl) {
           try {
-            window.open(res.waUrl, '_blank', 'noopener,noreferrer');
+            window.open(notifRes.waUrl, '_blank', 'noopener,noreferrer');
           } catch {}
         }
-      });
-      onToast(`¡Sesión iniciada! Se envió una copia de tu registro a ${emailVal.sanitized} y a tu WhatsApp (${cleanPhone}).`);
-    } else {
-      onToast(`¡Sesión iniciada con: ${emailVal.sanitized}!`);
+      } catch (notifErr) {
+        console.warn('Registration dispatch notice warning:', notifErr);
+      }
+
+      setRegPassword('');
+      setRegConfirmPassword('');
+      onToast(`¡Cuenta creada con éxito para ${nameVal.sanitized}!`);
+    } catch (err: any) {
+      console.warn('Register error:', err);
+      const friendlyMsg = getFirebaseAuthErrorMessage(err);
+      setAuthError(friendlyMsg);
+      onToast(`⚠️ ${friendlyMsg}`);
+    } finally {
+      setAuthenticating(false);
+    }
+  };
+
+  // 3. RECUPERAR CONTRASEÑA VÍA CORREO
+  const handleSendPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      onToast('Ingresa tu correo para recuperar la contraseña.');
+      return;
+    }
+    const val = validateCustomerEmail(forgotEmail, 'Correo electrónico');
+    if (!val.valid) {
+      onToast(`⚠️ ${val.error}`);
+      return;
+    }
+    setSendingReset(true);
+    try {
+      await sendPasswordResetEmail(auth, val.sanitized);
+      onToast(`¡Correo de restablecimiento enviado a ${val.sanitized}! Revisa tu bandeja de entrada o spam.`);
+      setShowForgotModal(false);
+      setForgotEmail('');
+    } catch (err: any) {
+      const msg = getFirebaseAuthErrorMessage(err);
+      onToast(`⚠️ ${msg}`);
+    } finally {
+      setSendingReset(false);
     }
   };
 
@@ -308,13 +447,12 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
   const expiringCount = customerResults.filter((r) => r.status === 'por_vencer').length;
   const expiredCount = customerResults.filter((r) => r.status === 'vencida').length;
 
-  // Handle Logout / Clear Session
+  // Handle Logout / Clear Session Oficial
   const handleClearSession = async () => {
     try {
-      await fbSignOut(auth).catch(() => {});
-      localStorage.removeItem('alix_customer_session');
-    } catch {
-      // ignore
+      await authLogout();
+    } catch (e) {
+      console.warn('Logout warning:', e);
     }
     setVerifiedQuery('');
     setCustomerName('');
@@ -322,11 +460,12 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
     setCustomerPhone('');
     setCustomerPhoto('');
     setIsGoogleLinked(false);
-    setClientInputEmail('');
-    setClientInputName('');
+    setLoginPassword('');
+    setRegPassword('');
     setClientInputToken('');
     setReceiptSale(null);
-    onToast('Sesión cerrada.');
+    setAuthError(null);
+    onToast('Sesión cerrada correctamente.');
   };
 
   // Handle Token Copy
@@ -963,98 +1102,267 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                 </p>
               </div>
 
-              {/* Consultation Option Tabs */}
-              <div className="bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl flex items-center border border-slate-200 dark:border-slate-800">
+              {/* Consultation & Auth Option Tabs */}
+              <div className="bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl flex items-center border border-slate-200 dark:border-slate-800 gap-1">
                 <button
                   type="button"
-                  onClick={() => setAuthMode('google_email')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                    authMode === 'google_email'
-                      ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  onClick={() => {
+                    setAuthMode('login');
+                    setAuthError(null);
+                    setAuthSuccessMsg(null);
+                  }}
+                  className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    authMode === 'login'
+                      ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Google / Correo de Cuenta</span>
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Iniciar Sesión</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setAuthMode('token_search')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  onClick={() => {
+                    setAuthMode('register');
+                    setAuthError(null);
+                    setAuthSuccessMsg(null);
+                  }}
+                  className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    authMode === 'register'
+                      ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Crear Cuenta</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('token_search');
+                    setAuthError(null);
+                    setAuthSuccessMsg(null);
+                  }}
+                  className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                     authMode === 'token_search'
-                      ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <Key className="w-3.5 h-3.5" />
-                  <span>Consultar por Token / Ticket</span>
+                  <span>Por Token</span>
                 </button>
               </div>
 
-              {/* AUTH OPTION 1: GOOGLE SIGN-IN OR EMAIL REGISTRATION */}
-              {authMode === 'google_email' ? (
+              {/* Mensaje de error de autenticación claro */}
+              {authError && (
+                <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <span className="font-bold block">Aviso de seguridad</span>
+                    <span className="text-[11.5px] leading-relaxed">{authError}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Mensaje de éxito o informativo */}
+              {authSuccessMsg && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-150">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <span className="font-bold block">Operación exitosa</span>
+                    <span className="text-[11.5px] leading-relaxed">{authSuccessMsg}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* OPCIÓN 1: FORMULARIO INICIAR SESIÓN */}
+              {authMode === 'login' && (
                 <div className="space-y-4">
                   {/* Google / Gmail Sign In Button */}
                   <button
                     type="button"
                     onClick={handleGoogleSignIn}
                     disabled={authenticating}
-                    className="w-full py-3.5 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-white font-black text-sm border-2 border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-3 shadow-sm hover:shadow-md cursor-pointer disabled:opacity-50 group"
+                    className="w-full py-3 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-white font-black text-xs sm:text-sm border-2 border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-2.5 shadow-sm hover:shadow cursor-pointer disabled:opacity-50 group"
                   >
                     {authenticating ? (
                       <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
                     ) : (
-                      <svg className="w-5 h-5 shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
-                        <path
-                          fill="#4285F4"
-                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                        />
-                        <path
-                          fill="#EA4335"
-                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                        />
+                      <svg className="w-4 h-4 shrink-0 group-hover:scale-105 transition-transform" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                       </svg>
                     )}
                     <span>Continuar con mi Cuenta de Google / Gmail</span>
                   </button>
 
-                  {/* Divider */}
-                  <div className="flex items-center gap-3 my-3">
+                  <div className="flex items-center gap-3 my-2">
                     <div className="flex-1 border-t border-slate-200 dark:border-slate-800" />
-                    <span className="text-[11px] font-bold uppercase text-slate-400">
-                      o con tu correo electrónico
+                    <span className="text-[10.5px] font-bold uppercase text-slate-400">
+                      o con tu correo y contraseña
                     </span>
                     <div className="flex-1 border-t border-slate-200 dark:border-slate-800" />
                   </div>
 
-                  {/* Email & Name Form */}
-                  <form onSubmit={handleEmailAuthSubmit} className="space-y-3.5">
+                  <form onSubmit={handleEmailLoginSubmit} className="space-y-3.5">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Tu Nombre Completo:
+                        Correo Electrónico:
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="email"
+                          required
+                          value={loginEmail}
+                          onChange={(e) => {
+                            setLoginEmail(e.target.value);
+                            if (authError) setAuthError(null);
+                          }}
+                          placeholder="tu.correo@gmail.com"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                          Contraseña:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotEmail(loginEmail);
+                            setShowForgotModal(true);
+                          }}
+                          className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                        >
+                          ¿Olvidaste tu contraseña?
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type={showLoginPassword ? 'text' : 'password'}
+                          required
+                          value={loginPassword}
+                          onChange={(e) => {
+                            setLoginPassword(e.target.value);
+                            if (authError) setAuthError(null);
+                          }}
+                          placeholder="Tu contraseña de acceso"
+                          className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowLoginPassword(!showLoginPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
+                          title={showLoginPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        >
+                          {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-0.5">
+                      <label className="flex items-center gap-2 text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        <span>Mantener mi sesión iniciada</span>
+                      </label>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={authenticating}
+                      className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {authenticating ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Verificando credenciales...</span>
+                        </>
+                      ) : (
+                        <>
+                          <LogIn className="w-4 h-4" />
+                          <span>Iniciar Sesión en Mi Panel</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+
+                  <div className="text-center pt-2 border-t border-slate-100 dark:border-slate-850">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      ¿Aún no tienes una cuenta?{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode('register');
+                          setAuthError(null);
+                        }}
+                        className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                      >
+                        Regístrate aquí gratis
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* OPCIÓN 2: FORMULARIO CREAR CUENTA / REGISTRO */}
+              {authMode === 'register' && (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    disabled={authenticating}
+                    className="w-full py-3 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-white font-black text-xs sm:text-sm border-2 border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-2.5 shadow-sm hover:shadow cursor-pointer disabled:opacity-50 group"
+                  >
+                    {authenticating ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                    ) : (
+                      <svg className="w-4 h-4 shrink-0 group-hover:scale-105 transition-transform" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                    )}
+                    <span>Registrarme con Google en 1 Clic</span>
+                  </button>
+
+                  <div className="flex items-center gap-3 my-2">
+                    <div className="flex-1 border-t border-slate-200 dark:border-slate-800" />
+                    <span className="text-[10.5px] font-bold uppercase text-slate-400">
+                      o completa tus datos oficiales
+                    </span>
+                    <div className="flex-1 border-t border-slate-200 dark:border-slate-800" />
+                  </div>
+
+                  <form onSubmit={handleEmailRegisterSubmit} className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Nombre Completo:
                       </label>
                       <div className="relative">
                         <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
-                          value={clientInputName}
+                          required
+                          value={regName}
                           onChange={(e) => {
-                            const val = e.target.value;
-                            const check = detectMaliciousPayload(val);
-                            if (check.isMalicious) {
-                              onToast(`⚠️ Entrada rechazada: ${check.reason}`);
-                              return;
-                            }
-                            setClientInputName(val);
+                            setRegName(e.target.value);
+                            if (authError) setAuthError(null);
                           }}
                           placeholder="Ej: Renzo Silva"
                           className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
@@ -1064,80 +1372,136 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Correo Electrónico Registrado:
+                        Correo Electrónico Oficial:
                       </label>
                       <div className="relative">
                         <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                           type="email"
                           required
-                          value={clientInputEmail}
+                          value={regEmail}
                           onChange={(e) => {
-                            const val = e.target.value;
-                            const check = detectMaliciousPayload(val);
-                            if (check.isMalicious) {
-                              onToast(`⚠️ Correo rechazado: ${check.reason}`);
-                              return;
-                            }
-                            setClientInputEmail(val);
+                            setRegEmail(e.target.value);
+                            if (authError) setAuthError(null);
                           }}
                           placeholder="tu.correo@gmail.com"
                           className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                         />
                       </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        A este correo se despacharán tus credenciales y copias oficiales.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Contraseña:
+                        </label>
+                        <div className="relative">
+                          <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type={showRegPassword ? 'text' : 'password'}
+                            required
+                            value={regPassword}
+                            onChange={(e) => {
+                              setRegPassword(e.target.value);
+                              if (authError) setAuthError(null);
+                            }}
+                            placeholder="Mínimo 6 caracteres"
+                            className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegPassword(!showRegPassword)}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
+                            title={showRegPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                          >
+                            {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Confirmar Contraseña:
+                        </label>
+                        <div className="relative">
+                          <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type={showRegPassword ? 'text' : 'password'}
+                            required
+                            value={regConfirmPassword}
+                            onChange={(e) => {
+                              setRegConfirmPassword(e.target.value);
+                              if (authError) setAuthError(null);
+                            }}
+                            placeholder="Repite la contraseña"
+                            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                        <span>WhatsApp / Teléfono:</span>
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copia automática por WhatsApp</span>
+                        <span>WhatsApp / Teléfono (Opcional):</span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copia automática WhatsApp</span>
                       </label>
                       <div className="relative">
                         <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                           type="tel"
-                          value={clientInputPhone}
+                          value={regPhone}
                           onChange={(e) => {
-                            const val = e.target.value;
-                            const check = detectMaliciousPayload(val);
-                            if (check.isMalicious) {
-                              onToast(`⚠️ Entrada rechazada: ${check.reason}`);
-                              return;
-                            }
-                            setClientInputPhone(val);
+                            setRegPhone(e.target.value);
+                            if (authError) setAuthError(null);
                           }}
                           placeholder="Ej: +51 987 654 321"
                           className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                         />
                       </div>
-                      <p className="text-[10.5px] text-slate-400 dark:text-slate-500 mt-1 italic">
-                        🔒 Te enviaremos una copia de confirmación con tus datos a tu correo y a tu WhatsApp.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <label className="flex items-center gap-2 text-slate-600 dark:text-slate-400 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={rememberMe}
-                          onChange={(e) => setRememberMe(e.target.checked)}
-                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                        />
-                        <span>Mantener mi sesión iniciada en este navegador</span>
-                      </label>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                      disabled={authenticating}
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
                     >
-                      <CheckSquare className="w-4 h-4" />
-                      <span>Ingresar a Mi Panel de Compras</span>
+                      {authenticating ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Creando cuenta oficial...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4" />
+                          <span>Crear Cuenta &amp; Ingresar a Mi Panel</span>
+                        </>
+                      )}
                     </button>
                   </form>
+
+                  <div className="text-center pt-2 border-t border-slate-100 dark:border-slate-850">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      ¿Ya tienes una cuenta registrada?{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode('login');
+                          setAuthError(null);
+                        }}
+                        className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                      >
+                        Inicia sesión aquí
+                      </button>
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                /* AUTH OPTION 2: TOKEN DIRECT LOOKUP */
+              )}
+
+              {/* OPCIÓN 3: CONSULTAR POR TOKEN DIRECTO */}
+              {authMode === 'token_search' && (
                 <form onSubmit={handleTokenLookupSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -1162,6 +1526,9 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                         className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                       />
                     </div>
+                    <p className="text-[10.5px] text-slate-400 mt-1">
+                      Si realizaste una compra rápida, ingresa el código ALI recibido en tu comprobante.
+                    </p>
                   </div>
 
                   <button
@@ -1171,13 +1538,23 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                     <Search className="w-4 h-4" />
                     <span>Consultar Pedido por Token</span>
                   </button>
+
+                  <div className="text-center pt-2 border-t border-slate-100 dark:border-slate-850">
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('login')}
+                      className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      &larr; Volver al inicio de sesión con correo
+                    </button>
+                  </div>
                 </form>
               )}
 
               {/* Información de seguridad y privacidad del panel oficial */}
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                 <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>Tus datos de acceso y compras oficiales están protegidos con cifrado y garantía activa.</span>
+                <span>Autenticación protegida con Firebase Auth oficial sin almacenamiento inseguro de claves.</span>
               </div>
             </div>
           ) : (

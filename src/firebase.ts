@@ -1,5 +1,16 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  updateProfile,
+  sendPasswordResetEmail,
+  User,
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -27,6 +38,7 @@ export const db = dbId ? getFirestore(app, dbId) : getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export enum OperationType {
   CREATE = 'create',
@@ -99,4 +111,57 @@ export async function uploadFileToFirebaseStorage(file: File | Blob, path: strin
   }
 }
 
-export { signInWithPopup, signOut };
+export {
+  signInWithPopup,
+  signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  updateProfile,
+  sendPasswordResetEmail,
+};
+export type { User };
+
+/**
+ * Traduce los códigos de error oficiales de Firebase Authentication a mensajes claros en español.
+ */
+export function getFirebaseAuthErrorMessage(error: unknown): string {
+  if (!error || typeof error !== 'object') {
+    return 'Ocurrió un error inesperado al procesar la autenticación.';
+  }
+
+  const code = (error as { code?: string }).code || '';
+
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'Este correo electrónico ya está registrado. Por favor, inicia sesión con tu contraseña.';
+    case 'auth/invalid-email':
+      return 'El formato del correo electrónico ingresado no es válido.';
+    case 'auth/user-not-found':
+      return 'No existe una cuenta registrada con este correo electrónico. Puedes crear una nueva cuenta.';
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Correo electrónico o contraseña incorrectos. Verifica tus datos e intenta nuevamente.';
+    case 'auth/weak-password':
+      return 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+    case 'auth/too-many-requests':
+      return 'Demasiados intentos fallidos consecutivos. El acceso ha sido bloqueado temporalmente por seguridad. Inténtalo más tarde.';
+    case 'auth/network-request-failed':
+      return 'Error de conexión de red. Verifica tu conexión a internet y vuelve a intentar.';
+    case 'auth/popup-closed-by-user':
+      return 'La ventana de autenticación de Google fue cerrada antes de completar el inicio de sesión.';
+    case 'auth/cancelled-popup-request':
+      return 'Se abrió otra ventana de autenticación y se canceló la solicitud anterior.';
+    case 'auth/popup-blocked':
+      return 'Tu navegador bloqueó la ventana emergente de Google. Por favor, habilita las ventanas emergentes (pop-ups) para este sitio.';
+    case 'auth/unauthorized-domain':
+      return 'Dominio no autorizado en Firebase. Agrega tu dominio (ej. aliclip.site o tu URL de Cloudflare) en Firebase Console > Authentication > Settings > Dominios autorizados.';
+    case 'auth/operation-not-allowed':
+      return 'El proveedor de inicio de sesión (Google o Correo) no está habilitado en Firebase Console. Ve a Authentication > Sign-in method y actívalo.';
+    case 'auth/user-disabled':
+      return 'Esta cuenta de usuario ha sido inhabilitada por administración.';
+    default:
+      return (error as Error).message || 'No se pudo completar la operación de autenticación.';
+  }
+}
+

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { Product, ProductPlan, StoreSettings, PaymentMethod, SaleRecord } from '../types';
 import { DEFAULT_PAYMENT_METHODS, createSaleRecord } from '../services/storeService';
-import { auth, googleProvider } from '../firebase';
+import { auth, googleProvider, getFirebaseAuthErrorMessage } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { triggerPurchaseConfetti } from '../utils/confetti';
 import { getDurationOptions, DurationOption } from '../utils/durationPricing';
@@ -259,13 +259,8 @@ export const BuyModal: React.FC<BuyModalProps> = ({
       }
     } catch (err: any) {
       console.warn('Google popup error:', err);
-      const fallbackMail = 'gemini.genpro@gmail.com';
-      setClientEmail(fallbackMail);
-      if (!clientName) setClientName('Usuario Google');
-      setIsGoogleLinked(true);
-      setHasCustomerSession(true);
-      setShowRegistrationNotice(false);
-      onToast(`¡Cuenta de Google (${fallbackMail}) vinculada!`);
+      const friendlyMsg = getFirebaseAuthErrorMessage(err);
+      onToast(`⚠️ ${friendlyMsg}`);
     } finally {
       setIsLinkingGoogle(false);
     }

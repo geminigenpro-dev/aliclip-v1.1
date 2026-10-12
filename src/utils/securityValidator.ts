@@ -211,6 +211,28 @@ export function validatePhoneNumber(phone: string, label = 'Teléfono'): Validat
 }
 
 /**
+ * Validación estricta para Contraseñas
+ * Requiere un mínimo de 6 caracteres (según Firebase Auth) y no exceder límites razonables.
+ * No sanitiza ni altera caracteres especiales de la contraseña para no corromper la clave del usuario.
+ */
+export function validatePassword(password: string, label = 'Contraseña'): ValidationResult {
+  if (!password || typeof password !== 'string') {
+    return { valid: false, sanitized: '', error: `${label} es obligatoria.` };
+  }
+
+  if (password.length < 6) {
+    return { valid: false, sanitized: '', error: `${label} debe contener al menos 6 caracteres.` };
+  }
+
+  if (password.length > 128) {
+    return { valid: false, sanitized: '', error: `${label} excede el límite de 128 caracteres.` };
+  }
+
+  return { valid: true, sanitized: password };
+}
+
+
+/**
  * Validación estricta para Documentos de Identidad (DNI, RUC, CE)
  */
 export function validateIdentityDocument(doc: string, label = 'Documento de identidad'): ValidationResult {
