@@ -8,6 +8,12 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
+      {
+        name: 'cloudflare-no-rocket-loader',
+        transformIndexHtml(html) {
+          return html.replace(/<script\b(?![^>]*data-cfasync)/gi, '<script data-cfasync="false"');
+        },
+      },
     ],
     resolve: {
       alias: {

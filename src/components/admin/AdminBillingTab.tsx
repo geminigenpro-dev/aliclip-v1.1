@@ -34,10 +34,6 @@ import {
   detectMaliciousPayload,
 } from '../../utils/securityValidator';
 import { ReceiptQrCode } from '../ReceiptQrCode';
-import {
-  downloadElementAsPdf,
-  downloadElementAsPng,
-} from '../../utils/receiptExporter';
 
 interface AdminBillingTabProps {
   settings: StoreSettings;
@@ -100,6 +96,7 @@ export const AdminBillingTab: React.FC<AdminBillingTabProps> = ({
     setExportingPdf(true);
     onToast('Generando comprobante de muestra en PDF...');
     try {
+      const { downloadElementAsPdf } = await import('../../utils/receiptExporter');
       await downloadElementAsPdf(
         'billing-preview-ticket',
         `Comprobante_Muestra_${prefix || 'B001'}.pdf`,
@@ -118,6 +115,7 @@ export const AdminBillingTab: React.FC<AdminBillingTabProps> = ({
     setExportingPng(true);
     onToast('Generando imagen PNG de alta definición...');
     try {
+      const { downloadElementAsPng } = await import('../../utils/receiptExporter');
       await downloadElementAsPng(
         'billing-preview-ticket',
         `Comprobante_Muestra_${prefix || 'B001'}.png`

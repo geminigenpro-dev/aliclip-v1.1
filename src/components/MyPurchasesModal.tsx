@@ -57,10 +57,6 @@ import {
 } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
 import { ReceiptQrCode } from './ReceiptQrCode';
-import {
-  downloadElementAsPdf,
-  downloadElementAsPng,
-} from '../utils/receiptExporter';
 import { sendRegistrationNotification } from '../services/notificationService';
 
 import {
@@ -829,6 +825,7 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
     setExportingCustomerPdf(true);
     onToast('Generando comprobante en formato PDF...');
     try {
+      const { downloadElementAsPdf } = await import('../utils/receiptExporter');
       const filename = `Comprobante_${invoicePref}_${(receiptSale.accessToken || receiptSale.id).replace(/[^a-zA-Z0-9_-]/g, '')}.pdf`;
       await downloadElementAsPdf('digital-receipt-printable', filename, `Comprobante ${receiptSale.productName}`);
       onToast('¡Comprobante en PDF descargado con éxito!');
@@ -845,6 +842,7 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
     setExportingCustomerPng(true);
     onToast('Generando imagen PNG en alta definición...');
     try {
+      const { downloadElementAsPng } = await import('../utils/receiptExporter');
       const filename = `Comprobante_${invoicePref}_${(receiptSale.accessToken || receiptSale.id).replace(/[^a-zA-Z0-9_-]/g, '')}.png`;
       await downloadElementAsPng('digital-receipt-printable', filename);
       onToast('¡Comprobante en imagen PNG descargado con éxito!');

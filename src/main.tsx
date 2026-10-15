@@ -50,6 +50,7 @@ function mount() {
       </StrictMode>,
     );
   } catch (err) {
+    isMounted = false;
     console.error('Critical initialization error:', err);
     if (rootElement) {
       rootElement.innerHTML = `
@@ -58,7 +59,7 @@ function mount() {
             <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(99, 102, 241, 0.15); color: #818cf8; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; margin: 0 auto 16px;">!</div>
             <h2 style="font-size: 19px; font-weight: 800; margin-bottom: 8px;">AliClip Store</h2>
             <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; line-height: 1.5;">La tienda está cargando los componentes más recientes. Haz clic abajo para actualizar.</p>
-            <button onclick="window.location.reload()" style="background: #4f46e5; color: #ffffff; border: none; padding: 10px 22px; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">Recargar Tienda</button>
+            <button onclick="window.location.reload(true)" style="background: #4f46e5; color: #ffffff; border: none; padding: 10px 22px; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">Recargar Tienda</button>
           </div>
         </div>
       `;
@@ -66,8 +67,14 @@ function mount() {
   }
 }
 
+// Ensure execution under all browser lifecycle states
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', mount, { once: true });
+  window.addEventListener('load', mount, { once: true });
 } else {
   mount();
 }
+
+// Immediate zero-delay attempt and backup poll
+setTimeout(mount, 0);
+setTimeout(mount, 60);
