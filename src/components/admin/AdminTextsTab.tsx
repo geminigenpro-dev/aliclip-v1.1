@@ -17,9 +17,23 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  Mail,
+  Send,
+  Copy,
+  Check,
+  BellRing,
+  ExternalLink,
+  Link2,
 } from 'lucide-react';
 import { StoreSettings, FaqItemSetting, BenefitsTickerItemSetting } from '../../types';
 import { DEFAULT_FAQ_ITEMS, DEFAULT_TICKER_ITEMS, saveSettingsToFirestore } from '../../services/storeService';
+import {
+  generateWelcomeEmailHtml,
+  generateCredentialsEmailHtml,
+  generateAdminOrderAlertHtml,
+  OFFICIAL_SUPPORT_EMAIL,
+  DEFAULT_MAKE_WEBHOOK_URL,
+} from '../../services/notificationService';
 import { detectMaliciousPayload } from '../../utils/securityValidator';
 
 interface AdminTextsTabProps {
@@ -47,7 +61,112 @@ export const AdminTextsTab: React.FC<AdminTextsTabProps> = ({
     faq: false,
     footer: false,
     terms: false,
+    emails: false,
   });
+
+  const [testingWebhook, setTestingWebhook] = useState(false);
+  const [copiedTemplate, setCopiedTemplate] = useState<string | null>(null);
+
+  const handleTestWebhook = async () => {
+    const targetUrl = localSettings.makeWebhookUrl?.trim() || DEFAULT_MAKE_WEBHOOK_URL;
+    if (!targetUrl) {
+      onToast('⚠️ Ingresa una URL de Webhook válida primero.');
+      return;
+    }
+    setTestingWebhook(true);
+    try {
+      const testPayload = {
+        eventType: 'test_webhook',
+        storeName: localSettings.name || 'AliClip Store',
+        senderEmail: localSettings.senderEmail || OFFICIAL_SUPPORT_EMAIL,
+        supportEmail: localSettings.supportEmail || OFFICIAL_SUPPORT_EMAIL,
+        timestamp: new Date().toISOString(),
+        recipientEmail: localSettings.senderEmail || OFFICIAL_SUPPORT_EMAIL,
+        recipientName: 'Equipo de Soporte AliClip',
+        subject: `Prueba de Conexión Webhook - ${localSettings.name || 'AliClip'}`,
+        message: '¡Conexión exitosa entre Aliclip.site y tu Webhook de MailerSend!',
+      };
+
+      const res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testPayload),
+      });
+
+      if (res.ok || res.status === 200 || res.status === 201 || res.status === 202) {
+        onToast('✅ ¡Prueba de Webhook enviada con éxito a Make.com / MailerSend!');
+      } else {
+        onToast(`⚠️ Webhook respondió con código: ${res.status}`);
+      }
+    } catch (err: any) {
+      console.warn('Webhook test error:', err);
+      onToast('⚠️ Error al contactar el Webhook. Revisa la URL ingresada.');
+    } finally {
+      setTestingWebhook(false);
+    }
+  };
+
+  const copyTemplateToClipboard = (type: 'welcome' | 'credentials' | 'alert') => {
+    const storeName = localSettings.name || 'AliClip Store';
+    let html = '';
+    if (type === 'welcome') {
+      html = generateWelcomeEmailHtml({ name: 'Juan Pérez', email: 'cliente@ejemplo.com', phone: '+51 987 654 321' }, storeName);
+    } else if (type === 'credentials') {
+      html = generateCredentialsEmailHtml(
+        {
+          id: 'sale_demo_123',
+          accessToken: 'ALI-88992',
+          clientName: 'Juan Pérez',
+          clientEmail: 'cliente@ejemplo.com',
+          clientPhone: '+51 987 654 321',
+          productId: 'prod_demo',
+          productName: 'Netflix Premium Ultra HD 4K',
+          planName: 'Perfil Privado con PIN',
+          price: 'S/ 12.00',
+          paymentMethod: 'Yape',
+          accountType: 'Perfil Privado',
+          durationText: '1 Mes VIP',
+          durationMonths: 1,
+          activationDate: new Date().toISOString().split('T')[0],
+          expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'activa',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          email: 'netflix.cuentas.aliclip@gmail.com',
+          pin: '7721',
+          profileName: 'Perfil 3 (Juan)',
+          instructions: 'No modificar el PIN ni el nombre de perfil. Garantía activa 30 días.',
+        },
+        storeName
+      );
+    } else {
+      html = generateAdminOrderAlertHtml(
+        {
+          orderId: 'ALI-99012',
+          productName: 'Disney+ Premium 4K',
+          planName: 'Cuenta Completa',
+          price: 25,
+          clientName: 'María García',
+          clientEmail: 'maria@ejemplo.com',
+          clientPhone: '+51 999 888 777',
+          paymentMethod: 'Yape',
+          accountType: 'Cuenta Privada',
+          durationText: '1 Mes',
+        },
+        storeName
+      );
+    }
+
+    try {
+      navigator.clipboard.writeText(html);
+      setCopiedTemplate(type);
+      onToast(`✅ Plantilla HTML (${type}) copiada al portapapeles.`);
+      setTimeout(() => setCopiedTemplate(null), 3000);
+    } catch {
+      onToast('⚠️ No se pudo copiar al portapapeles.');
+    }
+  };
 
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -1538,6 +1657,159 @@ export const AdminTextsTab: React.FC<AdminTextsTabProps> = ({
                   onChange={(e) => setLocalSettings({ ...localSettings, termsCommitmentText: e.target.value })}
                   className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 leading-relaxed"
                 />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 11. CORREOS AUTOMÁTICOS & WEBHOOK (MAILERSEND / MAKE.COM / $0 USD) */}
+      {/* ========================================================================= */}
+      {matchesSearch('correos automaticos mailersend webhook soporte email credenciales') && (
+        <div className="rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+          <button
+            type="button"
+            onClick={() => toggleSection('emails')}
+            className="w-full p-4 flex items-center justify-between text-left bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/80 dark:from-indigo-950/40 dark:via-slate-900 dark:to-purple-950/40 hover:bg-indigo-50/90 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                  <span>11. Correos Automáticos & Webhook</span>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full normal-case">
+                    MailerSend $0 USD
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Despacho oficial desde soporte@aliclip.site: Bienvenida, entrega mixta de credenciales y alertas admin
+                </p>
+              </div>
+            </div>
+            {expandedSections.emails ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+
+          {expandedSections.emails && (
+            <div className="p-4 sm:p-5 space-y-5 border-t border-indigo-100 dark:border-indigo-950/60 text-xs">
+              {/* Info banner */}
+              <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-200 dark:border-indigo-800/80 space-y-1.5">
+                <div className="font-extrabold text-indigo-900 dark:text-indigo-200 flex items-center gap-2 text-xs">
+                  <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>Configuración de costo cero compatible con Cloudflare Pages</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Para mantener el costo en $0 USD sin activar Firebase Blaze, Aliclip envía un webhook seguro a <strong>Make.com</strong> o a tu servicio de automatización preferido, el cual procesa la petición y dispara el correo mediante la API de <strong>MailerSend</strong> usando tu dominio verificado <code>soporte@aliclip.site</code>.
+                </p>
+              </div>
+
+              {/* URL del Webhook */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-extrabold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                  URL del Webhook de Automatización (Make.com / Cloudflare Worker)
+                </label>
+                <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                  <div className="relative flex-1">
+                    <Link2 className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="url"
+                      placeholder="https://hook.us2.make.com/tu-webhook-id"
+                      value={localSettings.makeWebhookUrl ?? ''}
+                      onChange={(e) => setLocalSettings({ ...localSettings, makeWebhookUrl: e.target.value })}
+                      className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTestWebhook}
+                    disabled={testingWebhook}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{testingWebhook ? 'Probando...' : 'Probar Webhook'}</span>
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Webhook por defecto: <code>{DEFAULT_MAKE_WEBHOOK_URL}</code>. Si dejas este campo vacío, se utilizará el predeterminado del sistema.
+                </p>
+              </div>
+
+              {/* Correos de Remitente y Soporte */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                    Correo Remitente Oficial (MailerSend)
+                  </label>
+                  <input
+                    type="email"
+                    value={localSettings.senderEmail ?? OFFICIAL_SUPPORT_EMAIL}
+                    onChange={(e) => setLocalSettings({ ...localSettings, senderEmail: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400">Debe estar verificado con registros DNS en MailerSend.</span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                    Canal Oficial de Soporte y Alertas Admin
+                  </label>
+                  <input
+                    type="email"
+                    value={localSettings.supportEmail ?? OFFICIAL_SUPPORT_EMAIL}
+                    onChange={(e) => setLocalSettings({ ...localSettings, supportEmail: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400">Bandeja donde recibirás las alertas de nuevas solicitudes.</span>
+                </div>
+              </div>
+
+              {/* Plantillas HTML listas para usar en MailerSend */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-[11px] text-slate-700 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                    Plantillas HTML Optimizadas para MailerSend / Make.com
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">Copiar código HTML con 1 clic</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => copyTemplateToClipboard('welcome')}
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 hover:border-indigo-400 text-left transition-all cursor-pointer flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">1. Bienvenida</div>
+                      <div className="text-[10px] text-slate-400">Al registrarse el cliente</div>
+                    </div>
+                    {copiedTemplate === 'welcome' ? <Check className="w-4 h-4 text-emerald-500 shrink-0" /> : <Copy className="w-4 h-4 text-slate-400 shrink-0" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => copyTemplateToClipboard('credentials')}
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 hover:border-indigo-400 text-left transition-all cursor-pointer flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">2. Credenciales</div>
+                      <div className="text-[10px] text-slate-400">Entrega mixta (PIN/Drive)</div>
+                    </div>
+                    {copiedTemplate === 'credentials' ? <Check className="w-4 h-4 text-emerald-500 shrink-0" /> : <Copy className="w-4 h-4 text-slate-400 shrink-0" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => copyTemplateToClipboard('alert')}
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 hover:border-indigo-400 text-left transition-all cursor-pointer flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">3. Alerta Admin</div>
+                      <div className="text-[10px] text-slate-400">Nuevo pedido / comprobante</div>
+                    </div>
+                    {copiedTemplate === 'alert' ? <Check className="w-4 h-4 text-emerald-500 shrink-0" /> : <Copy className="w-4 h-4 text-slate-400 shrink-0" />}
+                  </button>
+                </div>
               </div>
             </div>
           )}

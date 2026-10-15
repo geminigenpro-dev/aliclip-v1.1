@@ -278,6 +278,14 @@ export interface StoreSettings {
   invoiceShowQr?: boolean; // Mostrar QR de verificación
   invoicePrimaryColor?: string; // Color de acento de la factura
 
+  // 13. Notificaciones & Correos Automáticos (MailerSend / Make.com / Webhook Gratuito)
+  makeWebhookUrl?: string; // URL del Webhook de Make.com o servicio externo
+  senderEmail?: string; // Correo remitente verificado (ej: soporte@aliclip.site)
+  supportEmail?: string; // Canal oficial de soporte (ej: soporte@aliclip.site)
+  notifyAdminOnOrder?: boolean; // Notificar al admin ante nueva solicitud
+  notifyCustomerOnRegister?: boolean; // Enviar correo de bienvenida al registrarse
+  notifyCustomerOnCredentials?: boolean; // Enviar credenciales oficiales al confirmar venta
+
   updatedAt?: string;
 }
 

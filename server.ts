@@ -304,23 +304,22 @@ app.post('/api/notifications/registration', (req: Request, res: Response) => {
 
     console.log(`[NOTIFICACIÓN REGISTRO] Copia despachada a correo: ${cleanEmail} y WhatsApp: ${cleanPhone} (Titular: ${cleanName})`);
 
-    // Sincronización automática con Webhook de Make.com (si está configurado)
-    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL || 'https://hook.us2.make.com/x1lu8emby6aqciwn3x9g4ae5bg4ojcdb';
+    // Sincronización automática con Webhook de Make.com (si está configurado en .env)
+    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL;
     if (makeWebhookUrl) {
       fetch(makeWebhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          event: 'registration_success',
           email: cleanEmail,
           name: cleanName,
-          phone: cleanPhone,
-          registration_id: clientToken,
           registered_at: new Date().toISOString(),
           store: storeName,
         }),
       })
-        .then(async (resp) => {
-          console.log(`[MAKE WEBHOOK] Estado respuesta: ${resp.status} ${resp.statusText}`);
+        .then((resp) => {
+          console.log(`[MAKE WEBHOOK] Estado respuesta: ${resp.status}`);
         })
         .catch((whErr) => {
           console.warn('[MAKE WEBHOOK] Error al contactar webhook:', whErr?.message);

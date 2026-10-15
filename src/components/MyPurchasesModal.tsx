@@ -222,6 +222,25 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
         const photo = res.user.photoURL || '';
         handleLookup(email, name, photo, true);
         onToast(`¡Cuenta de Google (${email}) vinculada con éxito!`);
+
+        // Si es la primera vez que se registra con Google, notificar a Make
+        const isNewUser = res.user.metadata?.creationTime === res.user.metadata?.lastSignInTime;
+        if (isNewUser) {
+          try {
+            const idToken = await res.user.getIdToken();
+            sendRegistrationNotification(
+              {
+                name,
+                email,
+                phone: settings.whatsappDisplay || '',
+                idToken,
+              },
+              settings.name || 'AliClip Store'
+            ).catch((err) => console.warn('Google sign-in webhook notification:', err));
+          } catch (gErr) {
+            console.warn('Google registration notification failed:', gErr);
+          }
+        }
       }
     } catch (err: any) {
       console.warn('Google popup error:', err);
@@ -336,16 +355,25 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
       // Actualizar nombre visible oficial en Firebase Auth
       await updateProfile(user, { displayName: nameVal.sanitized }).catch(() => {});
 
+      // Obtener token criptográfico de Firebase Auth para validar la petición en Cloudflare Pages
+      let idToken = '';
+      try {
+        idToken = await user.getIdToken();
+      } catch (tokenErr) {
+        console.warn('No se pudo obtener idToken para registro:', tokenErr);
+      }
+
       handleLookup(emailVal.sanitized, nameVal.sanitized, '', false);
       setCustomerPhone(cleanPhone);
 
-      // Despacho automático de copia de registro al correo y WhatsApp para generar confianza
+      // Despacho automático de copia de registro al webhook de Make y WhatsApp
       try {
         const notifRes = await sendRegistrationNotification(
           {
             name: nameVal.sanitized,
             email: emailVal.sanitized,
             phone: cleanPhone || settings.whatsappDisplay,
+            idToken,
           },
           settings.name || 'AliClip Store'
         );

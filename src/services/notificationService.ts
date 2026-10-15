@@ -13,6 +13,7 @@ export interface RegistrationNotificationData {
   name: string;
   email: string;
   phone: string;
+  idToken?: string;
 }
 
 export interface NotificationResult {
@@ -151,9 +152,14 @@ export async function sendRegistrationNotification(
 
   let emailSent = false;
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (data.idToken) {
+      headers['Authorization'] = `Bearer ${data.idToken}`;
+    }
+
     const res = await fetch('/api/notifications/registration', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         name: data.name,
         email: data.email,

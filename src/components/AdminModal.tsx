@@ -2318,6 +2318,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               products={products}
               sales={sales || []}
               storeName={brandSettings.name || 'AliClip Store'}
+              webhookUrl={brandSettings.makeWebhookUrl}
               onToast={onToast}
               onNavigateToRegister={() => setActiveTab('sales')}
             />
@@ -2331,6 +2332,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               products={products}
               sales={sales || []}
               storeName={brandSettings.name || 'AliClip Store'}
+              webhookUrl={brandSettings.makeWebhookUrl}
               onToast={onToast}
               onNavigateToHistory={() => setActiveTab('sales_history')}
             />

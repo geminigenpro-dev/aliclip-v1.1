@@ -33,6 +33,7 @@ interface AdminSalesHistoryTabProps {
   products: Product[];
   sales: SaleRecord[];
   storeName?: string;
+  webhookUrl?: string;
   onToast: (msg: string) => void;
   onNavigateToRegister?: () => void;
 }
@@ -41,6 +42,7 @@ export const AdminSalesHistoryTab: React.FC<AdminSalesHistoryTabProps> = ({
   products,
   sales,
   storeName = 'AliClip Store',
+  webhookUrl,
   onToast,
   onNavigateToRegister,
 }) => {
@@ -795,6 +797,7 @@ export const AdminSalesHistoryTab: React.FC<AdminSalesHistoryTabProps> = ({
         onClose={() => setEditingCredentialsSale(null)}
         sale={editingCredentialsSale}
         storeName={storeName}
+        webhookUrl={webhookUrl}
         onToast={onToast}
       />
 

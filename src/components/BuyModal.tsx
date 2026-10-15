@@ -28,7 +28,11 @@ import { auth, googleProvider, getFirebaseAuthErrorMessage } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { triggerPurchaseConfetti } from '../utils/confetti';
 import { getDurationOptions, DurationOption } from '../utils/durationPricing';
-import { sendRegistrationNotification } from '../services/notificationService';
+import {
+  sendRegistrationNotification,
+  sendAdminOrderAlertNotification,
+  OFFICIAL_SUPPORT_EMAIL,
+} from '../services/notificationService';
 import {
   validateCustomerName,
   validateCustomerEmail,
@@ -322,7 +326,8 @@ export const BuyModal: React.FC<BuyModalProps> = ({
           email: cleanEmail,
           phone: cleanPhone,
         },
-        settings.name || 'AliClip Store'
+        settings.name || 'AliClip Store',
+        settings.makeWebhookUrl
       );
 
       if (notifRes.waUrl) {
@@ -462,6 +467,27 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
     if (onSaleCreated) {
       onSaleCreated(savedRecord);
     }
+
+    // Despacho de alerta por correo al Administrador (soporte@aliclip.site) vía Webhook / MailerSend
+    try {
+      sendAdminOrderAlertNotification(
+        {
+          orderId: savedRecord.accessToken || savedRecord.id,
+          productName: savedRecord.productName,
+          planName: savedRecord.planName,
+          price: savedRecord.price,
+          clientName: savedRecord.clientName,
+          clientEmail: savedRecord.clientEmail || cleanEmail,
+          clientPhone: savedRecord.clientPhone,
+          paymentMethod: savedRecord.paymentMethod,
+          accountType: savedRecord.accountType,
+          durationText: savedRecord.durationText,
+          supportEmail: settings.supportEmail || OFFICIAL_SUPPORT_EMAIL,
+        },
+        settings.name || 'AliClip Store',
+        settings.makeWebhookUrl
+      ).catch((err) => console.warn('Admin order alert non-blocking warning:', err));
+    } catch {}
 
     // Persistir sesión de cliente en localStorage
     try {
