@@ -25,7 +25,6 @@ interface AdminCredentialsModalProps {
   onClose: () => void;
   sale: SaleRecord | null;
   storeName?: string;
-  webhookUrl?: string;
   onToast: (msg: string) => void;
   onSuccess?: () => void;
 }
@@ -35,7 +34,6 @@ export const AdminCredentialsModal: React.FC<AdminCredentialsModalProps> = ({
   onClose,
   sale,
   storeName = 'AliClip Store',
-  webhookUrl,
   onToast,
   onSuccess,
 }) => {
@@ -123,8 +121,8 @@ export const AdminCredentialsModal: React.FC<AdminCredentialsModalProps> = ({
       // 1. Guardar en BD / LocalStorage para que el cliente lo vea en su panel "Mis compras"
       await updateSaleCredentials(sale.id, creds);
 
-      // 2. Despachar notificación automática a correo y WhatsApp (MailerSend / Webhook)
-      const notifRes = await sendSaleCredentialsNotification(sale, creds, storeName, webhookUrl);
+      // 2. Despachar notificación automática a correo y WhatsApp
+      const notifRes = await sendSaleCredentialsNotification(sale, creds, storeName);
 
       // 3. Abrir WhatsApp con el mensaje estructurado de credenciales
       if (notifRes.waUrl) {

@@ -42,7 +42,6 @@ interface AdminSalesTabProps {
   products: Product[];
   sales: SaleRecord[];
   storeName?: string;
-  webhookUrl?: string;
   onToast: (msg: string) => void;
   onNavigateToHistory?: () => void;
 }
@@ -51,7 +50,6 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
   products,
   sales,
   storeName = 'AliClip Store',
-  webhookUrl,
   onToast,
   onNavigateToHistory,
 }) => {
@@ -209,7 +207,7 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
       // Despacho automático de copia con los datos de acceso/credenciales necesario al panel del cliente, correo y WhatsApp
       let waUrl = '';
       try {
-        const notifRes = await sendSaleCredentialsNotification(newSale, creds, storeName, webhookUrl);
+        const notifRes = await sendSaleCredentialsNotification(newSale, creds, storeName);
         waUrl = notifRes.waUrl;
         if (waUrl) {
           try {
@@ -928,7 +926,6 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
         onClose={() => setEditingCredentialsSale(null)}
         sale={editingCredentialsSale}
         storeName={storeName}
-        webhookUrl={webhookUrl}
         onToast={onToast}
       />
 

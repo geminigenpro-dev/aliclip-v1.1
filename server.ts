@@ -304,22 +304,23 @@ app.post('/api/notifications/registration', (req: Request, res: Response) => {
 
     console.log(`[NOTIFICACIÓN REGISTRO] Copia despachada a correo: ${cleanEmail} y WhatsApp: ${cleanPhone} (Titular: ${cleanName})`);
 
-    // Sincronización automática con Webhook de Make.com (si está configurado en .env)
-    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL;
+    // Sincronización automática con Webhook de Make.com (si está configurado)
+    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL || 'https://hook.us2.make.com/x1lu8emby6aqciwn3x9g4ae5bg4ojcdb';
     if (makeWebhookUrl) {
       fetch(makeWebhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          event: 'registration_success',
           email: cleanEmail,
           name: cleanName,
+          phone: cleanPhone,
+          registration_id: clientToken,
           registered_at: new Date().toISOString(),
           store: storeName,
         }),
       })
-        .then((resp) => {
-          console.log(`[MAKE WEBHOOK] Estado respuesta: ${resp.status}`);
+        .then(async (resp) => {
+          console.log(`[MAKE WEBHOOK] Estado respuesta: ${resp.status} ${resp.statusText}`);
         })
         .catch((whErr) => {
           console.warn('[MAKE WEBHOOK] Error al contactar webhook:', whErr?.message);
@@ -391,66 +392,6 @@ app.post('/api/notifications/sale-credentials', (req: Request, res: Response) =>
   } catch (err: any) {
     console.error('Error en /api/notifications/sale-credentials:', err);
     return res.status(500).json({ error: 'Error procesando despacho de credenciales.' });
-  }
-});
-
-// Alerta al administrador ante un nuevo pedido registrado
-app.post('/api/notifications/admin-order-alert', (req: Request, res: Response) => {
-  try {
-    const {
-      orderId,
-      accessToken,
-      clientName,
-      clientEmail,
-      clientPhone,
-      productName,
-      planName,
-      price,
-      paymentMethod,
-      storeName = 'AliClip Store',
-    } = req.body;
-
-    if (!clientName || !clientEmail || !productName) {
-      return res.status(400).json({ error: 'Datos incompletos para la alerta de pedido.' });
-    }
-
-    const cleanName = sanitizeStrictText(clientName, 100);
-    const cleanEmail = sanitizeStrictText(clientEmail, 120);
-    const cleanPhone = clientPhone ? sanitizeStrictText(clientPhone, 30) : '';
-    const cleanProduct = sanitizeStrictText(productName, 100);
-    const token = accessToken || orderId || 'PENDIENTE';
-
-    console.log(`[ALERTA PEDIDO ADMIN] Nuevo pedido de ${cleanName} (${cleanProduct}) - Token: ${token}`);
-
-    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL;
-    if (makeWebhookUrl) {
-      fetch(makeWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: 'admin_order_alert',
-          token,
-          store: storeName,
-          client_name: cleanName,
-          client_email: cleanEmail,
-          client_phone: cleanPhone,
-          product_name: cleanProduct,
-          plan_name: planName,
-          price,
-          payment_method: paymentMethod || 'Web',
-          created_at: new Date().toISOString(),
-        }),
-      }).catch((whErr) => console.warn('[MAKE WEBHOOK] Error alerta admin:', whErr?.message));
-    }
-
-    return res.json({
-      success: true,
-      orderId: token,
-      message: `Alerta de nuevo pedido (${cleanProduct}) recibida correctamente.`,
-    });
-  } catch (err: any) {
-    console.error('Error en /api/notifications/admin-order-alert:', err);
-    return res.status(500).json({ error: 'Error procesando alerta de pedido.' });
   }
 });
 
