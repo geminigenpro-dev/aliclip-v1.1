@@ -95,10 +95,18 @@ export default function App() {
 
   // Admin session
   const [isAdmin, setIsAdmin] = useState(() => {
-    return sessionStorage.getItem('alixplay_admin_session') === 'true';
+    try {
+      return typeof window !== 'undefined' && sessionStorage.getItem('alixplay_admin_session') === 'true';
+    } catch {
+      return false;
+    }
   });
   const [adminUsername, setAdminUsername] = useState(() => {
-    return sessionStorage.getItem('alixplay_admin_user') || 'admin';
+    try {
+      return (typeof window !== 'undefined' && sessionStorage.getItem('alixplay_admin_user')) || 'admin';
+    } catch {
+      return 'admin';
+    }
   });
 
   // Toast
@@ -338,16 +346,20 @@ export default function App() {
   const handleAdminLoginSuccess = (user: string) => {
     setIsAdmin(true);
     setAdminUsername(user);
-    sessionStorage.setItem('alixplay_admin_session', 'true');
-    sessionStorage.setItem('alixplay_admin_user', user);
+    try {
+      sessionStorage.setItem('alixplay_admin_session', 'true');
+      sessionStorage.setItem('alixplay_admin_user', user);
+    } catch {}
     setShowAdminPanel(true);
   };
 
   const handleAdminLogout = () => {
     setIsAdmin(false);
     setAdminUsername('');
-    sessionStorage.removeItem('alixplay_admin_session');
-    sessionStorage.removeItem('alixplay_admin_user');
+    try {
+      sessionStorage.removeItem('alixplay_admin_session');
+      sessionStorage.removeItem('alixplay_admin_user');
+    } catch {}
     setShowAdminPanel(false);
     showToast('Sesión de administrador cerrada. Panel oculto.');
   };

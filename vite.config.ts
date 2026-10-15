@@ -8,12 +8,6 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
-      {
-        name: 'cloudflare-no-rocket-loader',
-        transformIndexHtml(html: string) {
-          return html.replace(/<script(?![^>]*data-cfasync)/g, '<script data-cfasync="false"');
-        },
-      },
     ],
     resolve: {
       alias: {
@@ -21,30 +15,9 @@ export default defineConfig(() => {
       },
     },
     build: {
-      chunkSizeWarningLimit: 600,
+      chunkSizeWarningLimit: 1000,
       cssCodeSplit: true,
-      minify: 'esbuild',
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-              return 'vendor-react';
-            }
-            if (id.includes('node_modules/firebase/')) {
-              return 'vendor-firebase';
-            }
-            if (id.includes('node_modules/motion/')) {
-              return 'vendor-motion';
-            }
-            if (id.includes('node_modules/lucide-react/')) {
-              return 'vendor-icons';
-            }
-            if (id.includes('node_modules/recharts')) {
-              return 'vendor-charts';
-            }
-          },
-        },
-      },
+      minify: 'esbuild' as const,
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
