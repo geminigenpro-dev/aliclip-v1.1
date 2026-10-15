@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import {
   Calendar,
   Search,
@@ -26,8 +26,11 @@ import {
 import { Product, SaleRecord } from '../../types';
 import { updateSaleStatus, deleteSaleRecord } from '../../services/storeService';
 import { sanitizeSearchQuery } from '../../utils/securityValidator';
-import { AdminSalesChart } from './AdminSalesChart';
 import { AdminCredentialsModal } from './AdminCredentialsModal';
+
+const AdminSalesChart = lazy(() =>
+  import('./AdminSalesChart').then((m) => ({ default: m.AdminSalesChart }))
+);
 
 interface AdminSalesHistoryTabProps {
   products: Product[];
@@ -389,10 +392,18 @@ export const AdminSalesHistoryTab: React.FC<AdminSalesHistoryTabProps> = ({
       {/* Visualización de Datos Recharts: Gráfico de Barras Diario o Mensual */}
       {showChart && (
         <div className="transition-all">
-          <AdminSalesChart
-            sales={filteredSales}
-            totalSalesCount={sales.length}
-          />
+          <Suspense
+            fallback={
+              <div className="h-64 flex items-center justify-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-400">
+                Cargando métricas y gráficos...
+              </div>
+            }
+          >
+            <AdminSalesChart
+              sales={filteredSales}
+              totalSalesCount={sales.length}
+            />
+          </Suspense>
         </div>
       )}
 

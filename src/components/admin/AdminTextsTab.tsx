@@ -17,10 +17,20 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  Mail,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { StoreSettings, FaqItemSetting, BenefitsTickerItemSetting } from '../../types';
 import { DEFAULT_FAQ_ITEMS, DEFAULT_TICKER_ITEMS, saveSettingsToFirestore } from '../../services/storeService';
 import { detectMaliciousPayload } from '../../utils/securityValidator';
+import {
+  generateWelcomeEmailHtml,
+  generateCredentialsEmailHtml,
+  generateAdminOrderAlertEmailHtml,
+  OFFICIAL_SUPPORT_EMAIL,
+  OFFICIAL_SUPPORT_WHATSAPP,
+} from '../../services/notificationService';
 
 interface AdminTextsTabProps {
   settings: StoreSettings;
@@ -47,7 +57,9 @@ export const AdminTextsTab: React.FC<AdminTextsTabProps> = ({
     faq: false,
     footer: false,
     terms: false,
+    emails: false,
   });
+  const [copiedEmailType, setCopiedEmailType] = useState<string | null>(null);
 
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -1538,6 +1550,174 @@ export const AdminTextsTab: React.FC<AdminTextsTabProps> = ({
                   onChange={(e) => setLocalSettings({ ...localSettings, termsCommitmentText: e.target.value })}
                   className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 leading-relaxed"
                 />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Plantillas de Correos Automáticos (MailerSend / Make.com) */}
+      {matchesSearch('correos email plantillas mailersend make webhook bienvenida credenciales alerta') && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 shadow-sm">
+          <button
+            type="button"
+            onClick={() => toggleSection('emails')}
+            className="w-full flex items-center justify-between text-left font-bold text-sm text-slate-800 dark:text-slate-100 hover:text-indigo-600 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="block font-black text-sm">Correos Automáticos & Plantillas MailerSend / Make</span>
+                <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                  Canal oficial: {OFFICIAL_SUPPORT_EMAIL} • WhatsApp: {OFFICIAL_SUPPORT_WHATSAPP}
+                </span>
+              </div>
+            </div>
+            {expandedSections.emails ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+
+          {expandedSections.emails && (
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 space-y-4 animate-fade-in text-xs">
+              <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-900 dark:text-indigo-200">
+                <p className="font-bold mb-1">Automatización Oficial Sin Costo (Make.com + MailerSend):</p>
+                <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                  Las notificaciones envían payloads estructurados hacia el webhook configurado. Puedes copiar las plantillas HTML prediseñadas para utilizarlas en los módulos de MailerSend de Make.com o directamente como respaldo.
+                </p>
+              </div>
+
+              {/* Template 1: Bienvenida */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-100">1. Plantilla: Correo de Bienvenida al Registrarse</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Se despacha al crear cuenta por formulario o Google en Aliclip.site.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const html = generateWelcomeEmailHtml({
+                      name: '{{name}}',
+                      email: '{{email}}',
+                      storeName: localSettings.name || 'AliClip Store',
+                    });
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(html);
+                      setCopiedEmailType('welcome');
+                      onToast('¡HTML de Bienvenida copiado!');
+                      setTimeout(() => setCopiedEmailType(null), 2500);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                >
+                  {copiedEmailType === 'welcome' ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-300" />
+                      <span>Copiado</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar HTML</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Template 2: Credenciales */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-100">2. Plantilla: Entrega de Credenciales y Accesos</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Se despacha al confirmar la venta desde el panel admin con los accesos (PIN, Usuario, Enlaces).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sampleSale: any = {
+                      id: 'ALI-SAMPLE',
+                      productName: '{{productName}}',
+                      planName: '{{planName}}',
+                      clientName: '{{clientName}}',
+                      expirationDate: '{{expirationDate}}',
+                    };
+                    const sampleCreds: any = {
+                      email: '{{usuario}}',
+                      pin: '{{pin}}',
+                      profileName: '{{perfil}}',
+                      instructions: '{{instrucciones}}',
+                      driveLink: '{{enlaceDrive}}',
+                    };
+                    const html = generateCredentialsEmailHtml(sampleSale, sampleCreds, localSettings.name || 'AliClip Store');
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(html);
+                      setCopiedEmailType('credentials');
+                      onToast('¡HTML de Credenciales copiado!');
+                      setTimeout(() => setCopiedEmailType(null), 2500);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                >
+                  {copiedEmailType === 'credentials' ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-white" />
+                      <span>Copiado</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar HTML</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Template 3: Alerta de Pedido Admin */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-100">3. Plantilla: Alerta Interna de Nuevo Pedido</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Notifica a soporte@aliclip.site ante cada solicitud en la web para despachar a tiempo.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sampleOrder: any = {
+                      clientName: '{{clientName}}',
+                      clientEmail: '{{clientEmail}}',
+                      clientPhone: '{{clientPhone}}',
+                      productName: '{{productName}}',
+                      planName: '{{planName}}',
+                      price: 0,
+                      paymentMethod: '{{paymentMethod}}',
+                      accessToken: '{{orderToken}}',
+                    };
+                    const html = generateAdminOrderAlertEmailHtml(sampleOrder, localSettings.name || 'AliClip Store');
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(html);
+                      setCopiedEmailType('adminAlert');
+                      onToast('¡HTML de Alerta de Pedido copiado!');
+                      setTimeout(() => setCopiedEmailType(null), 2500);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                >
+                  {copiedEmailType === 'adminAlert' ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-white" />
+                      <span>Copiado</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar HTML</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}

@@ -281,8 +281,8 @@ Instrucciones:
 // 4. NOTIFICACIONES AUTOMÁTICAS: REGISTRO DE CLIENTE Y ENTREGA DE CREDENCIALES
 // -----------------------------------------------------------------------------
 
-// Notificación de copia de registro al correo y WhatsApp
-app.post('/api/notifications/registration', (req: Request, res: Response) => {
+// Notificación de copia de registro al correo y WhatsApp (Sincronizado con Make.com vía MAKE_WEBHOOK_URL)
+app.post('/api/notifications/registration', async (req: Request, res: Response) => {
   try {
     const { name, email, phone, storeName = 'AliClip Store' } = req.body;
     if (!name || !email || !phone) {
@@ -302,39 +302,65 @@ app.post('/api/notifications/registration', (req: Request, res: Response) => {
     const cleanPhone = sanitizeStrictText(phone, 30);
     const clientToken = `CLI-${Date.now().toString().slice(-6)}`;
 
-    console.log(`[NOTIFICACIÓN REGISTRO] Copia despachada a correo: ${cleanEmail} y WhatsApp: ${cleanPhone} (Titular: ${cleanName})`);
+    // Validación opcional de token de Firebase en desarrollo local
+    const authHeader = req.headers.authorization;
+    let verifiedEmail = cleanEmail;
+    if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
+      const idToken = authHeader.replace(/^bearer\s+/i, '').trim();
+      const firebaseApiKey = process.env.VITE_FIREBASE_API_KEY || 'AIzaSyAzNLYJqHVkdFfWcRYn2Mi4ylhdiFsgkGk';
+      try {
+        const verifyRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${firebaseApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
+          }
+        );
+        if (verifyRes.ok) {
+          const verifyData: any = await verifyRes.json();
+          const userRec = verifyData?.users?.[0];
+          if (userRec?.email) {
+            verifiedEmail = userRec.email.toLowerCase();
+          }
+        }
+      } catch (verifyErr) {
+        console.warn('[SERVER] Advertencia verificando Firebase token:', verifyErr);
+      }
+    }
 
-    // Sincronización automática con Webhook de Make.com (si está configurado)
-    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL || 'https://hook.us2.make.com/x1lu8emby6aqciwn3x9g4ae5bg4ojcdb';
-    if (makeWebhookUrl) {
-      fetch(makeWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: cleanEmail,
-          name: cleanName,
-          phone: cleanPhone,
-          registration_id: clientToken,
-          registered_at: new Date().toISOString(),
-          store: storeName,
-        }),
-      })
-        .then(async (resp) => {
-          console.log(`[MAKE WEBHOOK] Estado respuesta: ${resp.status} ${resp.statusText}`);
-        })
-        .catch((whErr) => {
-          console.warn('[MAKE WEBHOOK] Error al contactar webhook:', whErr?.message);
+    console.log(`[NOTIFICACIÓN REGISTRO] Registro exitoso para: ${verifiedEmail} (Titular: ${cleanName})`);
+
+    // Sincronización con Webhook de Make.com (leído exclusivamente de variable de entorno MAKE_WEBHOOK_URL)
+    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL;
+    if (makeWebhookUrl && makeWebhookUrl.startsWith('http')) {
+      try {
+        const makeRes = await fetch(makeWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'user_registered_success',
+            email: verifiedEmail,
+            name: cleanName || undefined,
+            registeredAt: new Date().toISOString(),
+          }),
         });
+        console.log(`[MAKE WEBHOOK] Estado respuesta: ${makeRes.status} ${makeRes.statusText}`);
+      } catch (whErr: any) {
+        console.warn('[MAKE WEBHOOK] Error al contactar webhook:', whErr?.message);
+      }
+    } else {
+      console.log('[MAKE WEBHOOK] MAKE_WEBHOOK_URL no configurado en entorno local; omitiendo llamada externa.');
     }
 
     return res.json({
       success: true,
       clientToken,
       clientName: cleanName,
-      clientEmail: cleanEmail,
+      clientEmail: verifiedEmail,
       clientPhone: cleanPhone,
       timestamp: new Date().toISOString(),
-      message: `Copia de registro enviada exitosamente a ${cleanEmail} y preparada para WhatsApp.`,
+      message: `Copia de registro enviada exitosamente a ${verifiedEmail} y preparada para WhatsApp.`,
     });
   } catch (err: any) {
     console.error('Error en /api/notifications/registration:', err);

@@ -336,10 +336,18 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
       // Actualizar nombre visible oficial en Firebase Auth
       await updateProfile(user, { displayName: nameVal.sanitized }).catch(() => {});
 
+      // Obtener el ID Token verificado de Firebase Authentication para validar la solicitud en Cloudflare / Make
+      let idToken: string | undefined;
+      try {
+        idToken = await user.getIdToken();
+      } catch (tokenErr) {
+        console.warn('No se pudo obtener el Firebase ID Token:', tokenErr);
+      }
+
       handleLookup(emailVal.sanitized, nameVal.sanitized, '', false);
       setCustomerPhone(cleanPhone);
 
-      // Despacho automático de copia de registro al correo y WhatsApp para generar confianza
+      // Despacho de notificación de registro a Make (vía Cloudflare Function) y WhatsApp
       try {
         const notifRes = await sendRegistrationNotification(
           {
@@ -347,7 +355,8 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
             email: emailVal.sanitized,
             phone: cleanPhone || settings.whatsappDisplay,
           },
-          settings.name || 'AliClip Store'
+          settings.name || 'AliClip Store',
+          idToken
         );
         if (cleanPhone && notifRes.waUrl) {
           try {

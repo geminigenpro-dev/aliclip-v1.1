@@ -139,11 +139,12 @@ Tus datos ya están sincronizados en tu panel *"Mis compras"*, donde podrás ver
 }
 
 /**
- * 1. Envía notificación de registro del usuario (Correo y prepara WhatsApp)
+ * 1. Envía notificación de registro del usuario (Valida con token de Firebase hacia Cloudflare / Make y prepara WhatsApp)
  */
 export async function sendRegistrationNotification(
   data: RegistrationNotificationData,
-  storeName: string = 'AliClip Store'
+  storeName: string = 'AliClip Store',
+  firebaseIdToken?: string
 ): Promise<NotificationResult> {
   const waPhone = formatWhatsAppPhone(data.phone);
   const waMessage = buildRegistrationWhatsAppMessage(data, storeName);
@@ -151,9 +152,16 @@ export async function sendRegistrationNotification(
 
   let emailSent = false;
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (firebaseIdToken) {
+      headers['Authorization'] = `Bearer ${firebaseIdToken}`;
+    }
+
     const res = await fetch('/api/notifications/registration', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         name: data.name,
         email: data.email,
