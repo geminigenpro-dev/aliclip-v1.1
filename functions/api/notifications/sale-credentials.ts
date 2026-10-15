@@ -3,9 +3,34 @@ interface Env {
   STORE_NAME?: string;
 }
 
-export const onRequestPost = async (context: { request: Request; env: Env }) => {
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export const onRequestOptions = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: CORS_HEADERS,
+  });
+};
+
+export const onRequestPost = async (context: {
+  request: Request;
+  env: Env;
+  waitUntil?: (promise: Promise<unknown>) => void;
+}) => {
   try {
-    const body = await context.request.json() as any;
+    const contentType = context.request.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return new Response(
+        JSON.stringify({ error: 'Content-Type debe ser application/json.' }),
+        { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = (await context.request.json().catch(() => ({}))) as any;
     const {
       saleId,
       accessToken,
@@ -22,8 +47,8 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
 
     if (!clientName || !clientPhone || !productName) {
       return new Response(
-        JSON.stringify({ error: 'Datos incompletos para el despacho de credenciales.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Datos incompletos para el despacho de credenciales: nombre, teléfono y producto son requeridos.' }),
+        { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -46,15 +71,15 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       {
         status: 200,
         headers: {
+          ...CORS_HEADERS,
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
         },
       }
     );
   } catch (error: any) {
     return new Response(
       JSON.stringify({ error: 'Error procesando despacho de credenciales.' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
     );
   }
 };

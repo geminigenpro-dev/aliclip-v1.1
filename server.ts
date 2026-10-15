@@ -35,15 +35,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use((_req: Request, res: Response, next: NextFunction) => {
   // Prevenir sniffing de tipo MIME
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  // Filtro XSS legacy
-  res.setHeader('X-XSS-Protection', '1; mode=block');
   // Política de referrers estricta
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   // HSTS (HTTP Strict Transport Security)
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   // Restricción de permisos de hardware
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  // Permitir carga en iframe de AI Studio mientras previene clickjacking externo
+  // Permitir carga en iframe seguro
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   next();
 });
@@ -331,24 +329,32 @@ app.post('/api/notifications/registration', async (req: Request, res: Response) 
 
     console.log(`[NOTIFICACIÓN REGISTRO] Registro exitoso para: ${verifiedEmail} (Titular: ${cleanName})`);
 
-    // Sincronización con Webhook de Make.com (leído exclusivamente de variable de entorno MAKE_WEBHOOK_URL)
+    // Sincronización asíncrona con Webhook de Make.com (leído exclusivamente de MAKE_WEBHOOK_URL)
     const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL;
     if (makeWebhookUrl && makeWebhookUrl.startsWith('http')) {
-      try {
-        const makeRes = await fetch(makeWebhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event: 'user_registered_success',
-            email: verifiedEmail,
-            name: cleanName || undefined,
-            registeredAt: new Date().toISOString(),
-          }),
-        });
-        console.log(`[MAKE WEBHOOK] Estado respuesta: ${makeRes.status} ${makeRes.statusText}`);
-      } catch (whErr: any) {
-        console.warn('[MAKE WEBHOOK] Error al contactar webhook:', whErr?.message);
-      }
+      const asyncDispatch = async () => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const makeRes = await fetch(makeWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'user_registered_success',
+              email: verifiedEmail,
+              name: cleanName || undefined,
+              registeredAt: new Date().toISOString(),
+            }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          console.log(`[MAKE WEBHOOK ASYNC] Estado respuesta: ${makeRes.status} ${makeRes.statusText}`);
+        } catch (whErr: any) {
+          console.warn('[MAKE WEBHOOK ASYNC] Error al contactar webhook:', whErr?.message);
+        }
+      };
+      // Ejecución desacoplada en segundo plano
+      setImmediate(asyncDispatch);
     } else {
       console.log('[MAKE WEBHOOK] MAKE_WEBHOOK_URL no configurado en entorno local; omitiendo llamada externa.');
     }

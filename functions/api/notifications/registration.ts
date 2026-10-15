@@ -11,6 +11,8 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
 export const onRequestOptions = async () => {
   return new Response(null, {
     status: 204,
@@ -18,9 +20,22 @@ export const onRequestOptions = async () => {
   });
 };
 
-export const onRequestPost = async (context: { request: Request; env: Env }) => {
+export const onRequestPost = async (context: {
+  request: Request;
+  env: Env;
+  waitUntil?: (promise: Promise<unknown>) => void;
+}) => {
   try {
-    // 1. Extraer y validar encabezado de autorización con Firebase ID Token
+    // 1. Validar Content-Type
+    const contentType = context.request.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return new Response(
+        JSON.stringify({ error: 'Content-Type debe ser application/json.' }),
+        { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 2. Extraer y validar encabezado de autorización con Firebase ID Token
     const authHeader =
       context.request.headers.get('Authorization') ||
       context.request.headers.get('authorization');
@@ -38,9 +53,9 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     }
 
     const idToken = authHeader.replace(/^bearer\s+/i, '').trim();
-    if (!idToken) {
+    if (!idToken || idToken.length < 20) {
       return new Response(
-        JSON.stringify({ error: 'Token de autenticación vacío.' }),
+        JSON.stringify({ error: 'Token de autenticación de Firebase no válido o corrupto.' }),
         {
           status: 401,
           headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
@@ -48,7 +63,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       );
     }
 
-    // 2. Validar el Firebase ID Token contra la API de Google Identity Toolkit
+    // 3. Validar el Firebase ID Token contra la API de Google Identity Toolkit
     const firebaseApiKey =
       context.env.FIREBASE_API_KEY ||
       context.env.VITE_FIREBASE_API_KEY ||
@@ -92,21 +107,25 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       );
     }
 
-    // 3. Obtener datos del cuerpo de la petición (opcional para nombre si no vino en el token)
-    const body: any = await context.request.json().catch(() => ({}));
     const verifiedEmail = String(verifiedUser.email).trim().toLowerCase();
-    const resolvedName =
-      (body?.name && typeof body.name === 'string' && body.name.trim()) ||
-      verifiedUser.displayName ||
-      '';
+    if (!EMAIL_REGEX.test(verifiedEmail)) {
+      return new Response(
+        JSON.stringify({ error: 'El correo electrónico verificado no cumple con el formato estándar.' }),
+        { status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // 4. Leer secreto MAKE_WEBHOOK_URL configurado en Cloudflare Pages
+    // 4. Validar y procesar datos del cuerpo de la petición
+    const body: any = await context.request.json().catch(() => ({}));
+    const rawName = body?.name && typeof body.name === 'string' ? body.name.trim() : '';
+    const resolvedName = rawName || verifiedUser.displayName || '';
+
+    // 5. Validar formato y existencia del secreto MAKE_WEBHOOK_URL
     const makeWebhookUrl = context.env.MAKE_WEBHOOK_URL;
-    if (!makeWebhookUrl || typeof makeWebhookUrl !== 'string' || !makeWebhookUrl.startsWith('http')) {
+    if (!makeWebhookUrl || typeof makeWebhookUrl !== 'string' || !/^https?:\/\//i.test(makeWebhookUrl)) {
       return new Response(
         JSON.stringify({
-          error:
-            'MAKE_WEBHOOK_URL no está configurado como secreto en las variables de entorno de Cloudflare Pages.',
+          error: 'MAKE_WEBHOOK_URL no está configurado como secreto válido en Cloudflare Pages.',
         }),
         {
           status: 500,
@@ -115,7 +134,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       );
     }
 
-    // 5. Preparar ÚNICAMENTE los datos necesarios para Make (sin contraseñas ni tokens)
+    // 6. Preparar datos limpios y estrictos (sin contraseñas ni tokens)
     const makePayload: Record<string, string> = {
       event: 'user_registered_success',
       email: verifiedEmail,
@@ -126,35 +145,43 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       makePayload.name = String(resolvedName).slice(0, 100);
     }
 
-    // 6. Enviar petición HTTP POST al Webhook de Make
-    const makeRes = await fetch(makeWebhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(makePayload),
-    });
+    // 7. Ejecución asíncrona garantizada mediante context.waitUntil (desacopla latencia de Make del cliente)
+    const asyncWebhookTask = (async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        const makeRes = await fetch(makeWebhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(makePayload),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        console.log(`[MAKE WEBHOOK ASYNC] Estado de entrega: ${makeRes.status} ${makeRes.statusText}`);
+      } catch (err: any) {
+        console.warn('[MAKE WEBHOOK ASYNC] Error en despacho asíncrono hacia Make:', err?.message || err);
+      }
+    })();
 
-    if (!makeRes.ok) {
-      const errorText = await makeRes.text().catch(() => '');
-      return new Response(
-        JSON.stringify({
-          error: `Make respondió con estado ${makeRes.status}: ${errorText || 'Error en el webhook'}`,
-        }),
-        {
-          status: 502,
-          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-        }
-      );
+    if (typeof context.waitUntil === 'function') {
+      context.waitUntil(asyncWebhookTask);
+    } else {
+      asyncWebhookTask.catch((err) => {
+        console.warn('[MAKE WEBHOOK] Advertencia en tarea asíncrona:', err);
+      });
     }
 
+    // 8. Respuesta inmediata y confirmada al cliente
     return new Response(
       JSON.stringify({
         success: true,
+        queued: true,
         event: 'user_registered_success',
         email: verifiedEmail,
         name: resolvedName || null,
-        message: 'Notificación de registro enviada exitosamente a Make.',
+        message: 'Registro validado y notificación enviada asíncronamente a Make.',
         timestamp: new Date().toISOString(),
       }),
       {

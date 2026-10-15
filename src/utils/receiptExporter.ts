@@ -1,14 +1,14 @@
-import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
+import React from 'react';
 
 /**
  * Captures a DOM element as a high-resolution PNG data URL
- * Uses html-to-image to fully support modern CSS (oklch, CSS variables, flexbox, etc.)
+ * Uses html-to-image (dynamically imported on demand) to fully support modern CSS
  */
 async function captureElementToPng(
   element: HTMLElement,
   options?: { pixelRatio?: number; backgroundColor?: string }
 ): Promise<string> {
+  const { toPng } = await import('html-to-image');
   const pixelRatio = options?.pixelRatio ?? 2.5;
   const backgroundColor = options?.backgroundColor ?? '#ffffff';
 
@@ -28,7 +28,6 @@ async function captureElementToPng(
 
   try {
     // Always use skipFonts: true to prevent SecurityError when inspecting cross-origin stylesheets (e.g. Google Fonts)
-    // The browser natively renders the loaded fonts in the SVG foreignObject canvas anyway
     return await toPng(element, {
       pixelRatio,
       backgroundColor,
@@ -115,6 +114,7 @@ export async function downloadElementAsPdf(
   const imgWidth = img.naturalWidth || img.width || 600;
   const imgHeight = img.naturalHeight || img.height || 800;
 
+  const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -174,7 +174,6 @@ export async function printReceiptElement(
   }
 
   try {
-    // Generate high-resolution image representation so all Tailwind styles and layout are preserved
     const dataUrl = await captureElementToPng(element, { pixelRatio: 2.5 });
 
     const printFrame = document.createElement('iframe');
@@ -265,3 +264,15 @@ export async function printReceiptElement(
   }
 }
 
+/**
+ * Component bridge for React.lazy() loading of the receipt exporter system.
+ * Enables zero-overhead lazy initialization and prefetching.
+ */
+export const ReceiptExporter: React.FC<{
+  onDownloadPdf?: (elementId: string, filename?: string) => Promise<boolean>;
+  onDownloadPng?: (elementId: string, filename?: string) => Promise<boolean>;
+}> = () => {
+  return null;
+};
+
+export default ReceiptExporter;

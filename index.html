@@ -28,15 +28,12 @@
     <meta name="twitter:description" content="Compra membresías de ChatGPT Plus, Streaming 4K, Claude Pro y Canva Pro con entrega en 3 minutos por WhatsApp en Perú. Cuentas 100% garantizadas." />
     <meta name="twitter:image" content="https://aliclip.site/og-share-banner.png" />
     <meta name="twitter:image:alt" content="AliClip • Tienda de Cuentas Premium y Membresías IA" />
-    <!-- High-Performance Font Loading (Eliminate Render-Blocking) -->
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <!-- Optimized High-Performance Google Fonts Loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Inter:wght@400;600;700&display=swap"
-      crossorigin="anonymous"
     />
     <style>
       @media print {
@@ -135,17 +132,10 @@
   </head>
   <body class="selection:bg-indigo-600 selection:text-white flex flex-col min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0b0f19] dark:text-slate-100 transition-colors duration-200">
     <div id="root">
-      <div class="alix-initial-loader" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #0b0f19; color: #ffffff; font-family: system-ui, -apple-system, sans-serif; padding: 20px;">
-        <div style="text-align: center; max-width: 360px;">
-          <div style="width: 44px; height: 44px; border: 3px solid rgba(99, 102, 241, 0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px;"></div>
-          <div style="font-size: 14px; font-weight: 800; letter-spacing: 0.05em; color: #f8fafc; margin-bottom: 6px;">AliClip Oficial</div>
-          <div style="font-size: 12px; color: #94a3b8;">Cargando catálogo y membresías...</div>
-          <div id="alix-recovery-box" style="display: none; margin-top: 20px;">
-            <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">¿Está tardando más de lo esperado?</p>
-            <button onclick="window.location.reload(true)" style="background: #4f46e5; color: #ffffff; border: none; padding: 8px 18px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);">
-              Recargar Sitio
-            </button>
-          </div>
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #0b0f19; color: #ffffff; font-family: system-ui, -apple-system, sans-serif;">
+        <div style="text-align: center;">
+          <div style="width: 44px; height: 44px; border: 3px solid rgba(99, 102, 241, 0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px;"></div>
+          <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.05em; color: #94a3b8; text-transform: uppercase;">Cargando AliClip...</div>
         </div>
       </div>
       <style>
@@ -154,12 +144,6 @@
         }
       </style>
     </div>
-    <script data-cfasync="false">
-      setTimeout(function() {
-        var box = document.getElementById('alix-recovery-box');
-        if (box) box.style.display = 'block';
-      }, 5000);
-    </script>
     <script data-cfasync="false" type="module" src="/src/main.tsx"></script>
   </body>
 </html>

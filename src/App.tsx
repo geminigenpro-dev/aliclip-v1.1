@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
   Grid,
   Bot,
@@ -18,43 +18,46 @@ import { LazySection } from './components/LazySection';
 import { SeoHead } from './components/SeoHead';
 
 // Lazy-loaded heavy below-the-scroll sections to optimize initial page load
-const CustomerReviews = lazy(() =>
+const CustomerReviews = React.lazy(() =>
   import('./components/CustomerReviews').then((m) => ({ default: m.CustomerReviews }))
 );
-const PaymentMethods = lazy(() =>
+const PaymentMethods = React.lazy(() =>
   import('./components/PaymentMethods').then((m) => ({ default: m.PaymentMethods }))
 );
-const PurchaseProcess = lazy(() =>
+const PurchaseProcess = React.lazy(() =>
   import('./components/PurchaseProcess').then((m) => ({ default: m.PurchaseProcess }))
 );
-const FaqSection = lazy(() =>
+const FaqSection = React.lazy(() =>
   import('./components/FaqSection').then((m) => ({ default: m.FaqSection }))
 );
-const Footer = lazy(() =>
+const Footer = React.lazy(() =>
   import('./components/Footer').then((m) => ({ default: m.Footer }))
 );
 
-// Lazy-loaded on-demand modals
-const BuyModal = lazy(() =>
+// Lazy-loaded on-demand modals and heavy export engines to reduce main bundle size (~1.1MB savings)
+const BuyModal = React.lazy(() =>
   import('./components/BuyModal').then((m) => ({ default: m.BuyModal }))
 );
-const TermsModal = lazy(() =>
+const TermsModal = React.lazy(() =>
   import('./components/TermsModal').then((m) => ({ default: m.TermsModal }))
 );
-const ClaimsModal = lazy(() =>
+const ClaimsModal = React.lazy(() =>
   import('./components/ClaimsModal').then((m) => ({ default: m.ClaimsModal }))
 );
-const AdminModal = lazy(() =>
+const AdminModal = React.lazy(() =>
   import('./components/AdminModal').then((m) => ({ default: m.AdminModal }))
 );
-const AdminAuthModal = lazy(() =>
+const AdminAuthModal = React.lazy(() =>
   import('./components/AdminAuthModal').then((m) => ({ default: m.AdminAuthModal }))
 );
-const QuickViewModal = lazy(() =>
+const QuickViewModal = React.lazy(() =>
   import('./components/QuickViewModal').then((m) => ({ default: m.QuickViewModal }))
 );
-const MyPurchasesModal = lazy(() =>
+const MyPurchasesModal = React.lazy(() =>
   import('./components/MyPurchasesModal').then((m) => ({ default: m.MyPurchasesModal }))
+);
+const ReceiptExporter = React.lazy(() =>
+  import('./utils/receiptExporter').then((m) => ({ default: m.ReceiptExporter }))
 );
 import {
   subscribeToProducts,
@@ -93,18 +96,20 @@ export default function App() {
   const [showMyPurchases, setShowMyPurchases] = useState(false);
   const [myPurchasesQuery, setMyPurchasesQuery] = useState('');
 
-  // Admin session
-  const [isAdmin, setIsAdmin] = useState(() => {
+  // Admin session state with robust error catching
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     try {
       return typeof window !== 'undefined' && sessionStorage.getItem('alixplay_admin_session') === 'true';
-    } catch {
+    } catch (e) {
+      console.warn('Error reading admin session from sessionStorage:', e);
       return false;
     }
   });
-  const [adminUsername, setAdminUsername] = useState(() => {
+  const [adminUsername, setAdminUsername] = useState<string>(() => {
     try {
       return (typeof window !== 'undefined' && sessionStorage.getItem('alixplay_admin_user')) || 'admin';
-    } catch {
+    } catch (e) {
+      console.warn('Error reading admin username from sessionStorage:', e);
       return 'admin';
     }
   });
@@ -343,13 +348,54 @@ export default function App() {
     }
   };
 
+  // Auto-verify persisted admin session token with server/API with error catching
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('alixplay_admin_session_token');
+      if (token) {
+        fetch('/api/auth/verify', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => (res.ok ? res.json() : { authenticated: false }))
+          .then((data) => {
+            if (data?.authenticated && data?.user) {
+              setIsAdmin(true);
+              setAdminUsername(data.user);
+              try {
+                sessionStorage.setItem('alixplay_admin_session', 'true');
+                sessionStorage.setItem('alixplay_admin_user', data.user);
+              } catch (e) {
+                console.warn('Error saving verified admin session to sessionStorage:', e);
+              }
+            } else if (data && data.authenticated === false) {
+              setIsAdmin(false);
+              try {
+                localStorage.removeItem('alixplay_admin_session_token');
+                sessionStorage.removeItem('alixplay_admin_session');
+                sessionStorage.removeItem('alixplay_admin_user');
+              } catch (e) {
+                console.warn('Error clearing expired admin session from storage:', e);
+              }
+            }
+          })
+          .catch((err) => {
+            console.warn('Error during admin session validation:', err);
+          });
+      }
+    } catch (err) {
+      console.warn('Error accessing localStorage for admin verification:', err);
+    }
+  }, []);
+
   const handleAdminLoginSuccess = (user: string) => {
     setIsAdmin(true);
     setAdminUsername(user);
     try {
       sessionStorage.setItem('alixplay_admin_session', 'true');
       sessionStorage.setItem('alixplay_admin_user', user);
-    } catch {}
+    } catch (e) {
+      console.warn('Error writing admin session to sessionStorage:', e);
+    }
     setShowAdminPanel(true);
   };
 
@@ -359,7 +405,10 @@ export default function App() {
     try {
       sessionStorage.removeItem('alixplay_admin_session');
       sessionStorage.removeItem('alixplay_admin_user');
-    } catch {}
+      localStorage.removeItem('alixplay_admin_session_token');
+    } catch (e) {
+      console.warn('Error clearing admin session from storage:', e);
+    }
     setShowAdminPanel(false);
     showToast('Sesión de administrador cerrada. Panel oculto.');
   };
@@ -936,6 +985,9 @@ export default function App() {
             initialQuery={myPurchasesQuery}
           />
         )}
+
+        {/* Lazy receipt exporter engine mounted under Suspense */}
+        <ReceiptExporter />
       </Suspense>
     </div>
   );

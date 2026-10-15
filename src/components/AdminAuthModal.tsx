@@ -45,7 +45,11 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ onClose, onSucce
       if (serverRes.ok) {
         const data = await serverRes.json();
         if (data.token) {
-          localStorage.setItem('alixplay_admin_session_token', data.token);
+          try {
+            localStorage.setItem('alixplay_admin_session_token', data.token);
+          } catch (storageErr) {
+            console.warn('Error saving session token to localStorage:', storageErr);
+          }
           onSuccess(username.trim());
           onToast(`¡Sesión iniciada como administrador autenticado en servidor (${username})!`);
           onClose();
@@ -55,7 +59,12 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ onClose, onSucce
 
       // 2. Fallback de verificación local mediante Hash Criptográfico Seguro (SHA-256)
       const cleanUser = username.trim().toLowerCase();
-      const stored = localStorage.getItem('alixplay_local_admin');
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem('alixplay_local_admin');
+      } catch (storageErr) {
+        console.warn('Error reading local admin hash from localStorage:', storageErr);
+      }
       const defaultEnvUser = (import.meta.env.VITE_ADMIN_DEFAULT_USER as string) || 'admin';
       let validUser = defaultEnvUser.toLowerCase();
       let storedHash = DEFAULT_ADMIN_PASSWORD_HASH;
@@ -69,7 +78,11 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ onClose, onSucce
           } else if (parsed.pass) {
             // Migrar contraseña en texto plano anterior a hash criptográfico
             storedHash = await hashPassword(parsed.pass);
-            localStorage.setItem('alixplay_local_admin', JSON.stringify({ username: validUser, passHash: storedHash }));
+            try {
+              localStorage.setItem('alixplay_local_admin', JSON.stringify({ username: validUser, passHash: storedHash }));
+            } catch (saveErr) {
+              console.warn('Error saving migrated admin hash to localStorage:', saveErr);
+            }
           }
         } catch (err) {
           console.error(err);
