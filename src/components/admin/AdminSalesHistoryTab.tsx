@@ -36,6 +36,7 @@ interface AdminSalesHistoryTabProps {
   products: Product[];
   sales: SaleRecord[];
   storeName?: string;
+  webhookUrl?: string;
   onToast: (msg: string) => void;
   onNavigateToRegister?: () => void;
 }

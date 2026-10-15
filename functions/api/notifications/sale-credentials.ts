@@ -56,6 +56,43 @@ export const onRequestPost = async (context: {
     const senderEmail = 'soporte@aliclip.site';
     const supportWhatsApp = '+51967693595';
 
+    // Despacho asíncrono hacia Webhook de Make.com
+    const makeWebhookUrl =
+      (context.env as any).MAKE_WEBHOOK_URL ||
+      'https://hook.us2.make.com/p63mga8ksfezopwnure7x128cxq8tivq';
+    const makeApiKey =
+      (context.env as any).MAKE_API_KEY ||
+      'mlsn.3f1b4ce05eb6f5c5c3c546a623f9a62056d5ac5caa53a1659258f531081f45e4';
+
+    if (makeWebhookUrl) {
+      try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (makeApiKey) headers['x-make-apikey'] = makeApiKey;
+        await fetch(makeWebhookUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            event: 'sale_credentials_delivered',
+            store: storeName,
+            token,
+            saleId: token,
+            accessToken: token,
+            clientName: String(clientName).slice(0, 100),
+            clientEmail: clientEmail ? String(clientEmail).slice(0, 120) : '',
+            clientPhone: String(clientPhone).slice(0, 30),
+            productName: String(productName).slice(0, 100),
+            planName: String(planName || '').slice(0, 100),
+            price: Number(price) || 0,
+            expirationDate: expirationDate || '',
+            credentials: credentials || {},
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      } catch (whErr) {
+        console.warn('Error al contactar webhook de Make en sale-credentials:', whErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

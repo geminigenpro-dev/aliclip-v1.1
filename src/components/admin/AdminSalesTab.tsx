@@ -209,7 +209,7 @@ export const AdminSalesTab: React.FC<AdminSalesTabProps> = ({
       // Despacho automático de copia con los datos de acceso/credenciales necesario al panel del cliente, correo y WhatsApp
       let waUrl = '';
       try {
-        const notifRes = await sendSaleCredentialsNotification(newSale, creds, storeName, webhookUrl);
+        const notifRes = await sendSaleCredentialsNotification(newSale, creds, storeName);
         waUrl = notifRes.waUrl;
         if (waUrl) {
           try {

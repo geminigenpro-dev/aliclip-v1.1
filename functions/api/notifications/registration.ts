@@ -120,41 +120,43 @@ export const onRequestPost = async (context: {
     const rawName = body?.name && typeof body.name === 'string' ? body.name.trim() : '';
     const resolvedName = rawName || verifiedUser.displayName || '';
 
-    // 5. Validar formato y existencia del secreto MAKE_WEBHOOK_URL
-    const makeWebhookUrl = context.env.MAKE_WEBHOOK_URL;
-    if (!makeWebhookUrl || typeof makeWebhookUrl !== 'string' || !/^https?:\/\//i.test(makeWebhookUrl)) {
-      return new Response(
-        JSON.stringify({
-          error: 'MAKE_WEBHOOK_URL no está configurado como secreto válido en Cloudflare Pages.',
-        }),
-        {
-          status: 500,
-          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-        }
-      );
-    }
+    // 5. Validar formato y existencia del secreto MAKE_WEBHOOK_URL con fallback oficial
+    const makeWebhookUrl =
+      context.env.MAKE_WEBHOOK_URL ||
+      'https://hook.us2.make.com/p63mga8ksfezopwnure7x128cxq8tivq';
+    const makeApiKey =
+      (context.env as any).MAKE_API_KEY ||
+      'mlsn.3f1b4ce05eb6f5c5c3c546a623f9a62056d5ac5caa53a1659258f531081f45e4';
 
-    // 6. Preparar datos limpios y estrictos (sin contraseñas ni tokens)
-    const makePayload: Record<string, string> = {
+    // 6. Preparar datos limpios y completos para Make.com
+    const makePayload: Record<string, any> = {
       event: 'user_registered_success',
+      store: context.env.STORE_NAME || 'AliClip Store',
       email: verifiedEmail,
+      name: resolvedName ? String(resolvedName).slice(0, 100) : 'Cliente',
+      phone: body?.phone ? String(body.phone).slice(0, 30) : '',
+      clientToken: `CLI-${Date.now().toString().slice(-6)}`,
       registeredAt: new Date().toISOString(),
+      action: 'send_welcome_email',
+      supportEmail: 'soporte@aliclip.site',
+      supportWhatsApp: '+51967693595',
     };
-
-    if (resolvedName) {
-      makePayload.name = String(resolvedName).slice(0, 100);
-    }
 
     // 7. Ejecución asíncrona garantizada mediante context.waitUntil (desacopla latencia de Make del cliente)
     const asyncWebhookTask = (async () => {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (makeApiKey) {
+          headers['x-make-apikey'] = makeApiKey;
+        }
+
         const makeRes = await fetch(makeWebhookUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify(makePayload),
           signal: controller.signal,
         });

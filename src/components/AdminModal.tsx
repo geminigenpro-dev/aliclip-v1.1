@@ -45,6 +45,7 @@ import {
   Layers,
   GripVertical,
   SlidersHorizontal,
+  Mail,
 } from 'lucide-react';
 import { Product, StoreSettings, Claim, PaymentMethod, SaleRecord } from '../types';
 import {
@@ -89,6 +90,7 @@ interface AdminModalProps {
   onClose: () => void;
   onLogout: () => void;
   onToast: (msg: string) => void;
+  onOpenGmail?: (recipient?: string, subject?: string, template?: 'welcome' | 'credentials' | 'alert' | 'custom') => void;
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -100,6 +102,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onClose,
   onLogout,
   onToast,
+  onOpenGmail,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'products' | 'courses' | 'resources' | 'sales_history' | 'sales' | 'brand' | 'texts' | 'payments' | 'billing' | 'cloud' | 'claims' | 'security'
@@ -1031,6 +1034,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {onOpenGmail && (
+              <button
+                type="button"
+                onClick={() => onOpenGmail()}
+                className="px-2.5 py-1 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-bold rounded-lg border border-rose-200 dark:border-rose-800/80 flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Bandeja de entrada y despacho oficial por Gmail"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Gmail Oficial</span>
+              </button>
+            )}
             <button
               onClick={onLogout}
               className="px-2.5 py-1 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
@@ -2318,7 +2332,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               products={products}
               sales={sales || []}
               storeName={brandSettings.name || 'AliClip Store'}
-              webhookUrl={brandSettings.makeWebhookUrl}
               onToast={onToast}
               onNavigateToRegister={() => setActiveTab('sales')}
             />
