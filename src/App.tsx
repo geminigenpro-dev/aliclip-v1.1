@@ -59,9 +59,6 @@ const MyPurchasesModal = React.lazy(() =>
 const ReceiptExporter = React.lazy(() =>
   import('./utils/receiptExporter').then((m) => ({ default: m.ReceiptExporter }))
 );
-const GmailModal = React.lazy(() =>
-  import('./components/GmailModal').then((m) => ({ default: m.GmailModal }))
-);
 import {
   subscribeToProducts,
   subscribeToSettings,
@@ -98,21 +95,6 @@ export default function App() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showMyPurchases, setShowMyPurchases] = useState(false);
   const [myPurchasesQuery, setMyPurchasesQuery] = useState('');
-  const [showGmailModal, setShowGmailModal] = useState(false);
-  const [gmailInitialData, setGmailInitialData] = useState<{
-    recipient?: string;
-    subject?: string;
-    template?: 'welcome' | 'credentials' | 'alert' | 'custom';
-  }>({});
-
-  const handleOpenGmail = (
-    recipient?: string,
-    subject?: string,
-    template?: 'welcome' | 'credentials' | 'alert' | 'custom'
-  ) => {
-    setGmailInitialData({ recipient, subject, template });
-    setShowGmailModal(true);
-  };
 
   // Admin session state with robust error catching
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
@@ -193,8 +175,6 @@ export default function App() {
         setCategory('ai');
       } else if (hash === '#mis-compras' || hash === '#compras' || hash === '#mis-pedidos') {
         setShowMyPurchases(true);
-      } else if (hash === '#gmail' || hash === '#correo') {
-        setShowGmailModal(true);
       }
     };
     handleHash();
@@ -546,7 +526,6 @@ export default function App() {
         onLogoutAdmin={handleAdminLogout}
         onOpenTerms={() => setShowTerms(true)}
         onOpenMyPurchases={() => setShowMyPurchases(true)}
-        onOpenGmail={() => handleOpenGmail()}
         onBrandClick={handleBrandTripleClick}
         theme={theme}
         onToggleTheme={handleToggleTheme}
@@ -990,7 +969,6 @@ export default function App() {
             onClose={() => setShowAdminPanel(false)}
             onLogout={handleAdminLogout}
             onToast={showToast}
-            onOpenGmail={handleOpenGmail}
           />
         )}
 
@@ -1005,17 +983,6 @@ export default function App() {
             sales={sales}
             onToast={showToast}
             initialQuery={myPurchasesQuery}
-          />
-        )}
-
-        {showGmailModal && (
-          <GmailModal
-            isOpen={showGmailModal}
-            onClose={() => setShowGmailModal(false)}
-            onToast={showToast}
-            initialRecipient={gmailInitialData.recipient}
-            initialSubject={gmailInitialData.subject}
-            initialTemplate={gmailInitialData.template}
           />
         )}
 

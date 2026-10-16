@@ -34,7 +34,6 @@ interface NavbarProps {
   onLogoutAdmin: () => void;
   onOpenTerms: () => void;
   onOpenMyPurchases?: () => void;
-  onOpenGmail?: () => void;
   onBrandClick: () => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
@@ -51,7 +50,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogoutAdmin,
   onOpenTerms,
   onOpenMyPurchases,
-  onOpenGmail,
   onBrandClick,
   theme = 'light',
   onToggleTheme,
@@ -329,19 +327,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Iniciar Sesión</span>
                   </button>
                 )
-              )}
-
-              {/* Gmail Hub Button (Google Workspace) */}
-              {onOpenGmail && (
-                <button
-                  type="button"
-                  onClick={onOpenGmail}
-                  title="Abrir Centro de Correo Gmail (Google Workspace)"
-                  className="px-2.5 py-1.5 rounded-xl border border-rose-200/90 dark:border-rose-900/60 bg-rose-50/80 hover:bg-rose-100/90 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
-                >
-                  <Mail className="w-3.5 h-3.5 text-rose-500" />
-                  <span className="hidden sm:inline">Gmail</span>
-                </button>
               )}
 
               {/* Dark Mode Theme Toggle Button */}
@@ -646,24 +631,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Dudas sobre activación, cuentas y soporte</div>
                     </div>
                   </a>
-                )}
-                {onOpenGmail && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      onOpenGmail();
-                    }}
-                    className="w-full text-left flex items-center gap-3 p-2.5 rounded-xl border border-rose-200/80 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100/80 dark:hover:bg-rose-900/40 transition-all sm:col-span-2 group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                      <Mail className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">Centro de Correo Gmail</div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Bandeja de entrada y despacho oficial</div>
-                    </div>
-                  </button>
                 )}
               </div>
 
