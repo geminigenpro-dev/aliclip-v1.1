@@ -1170,7 +1170,7 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span>{isLinkingGoogle ? 'Conectando con Google...' : '⚡ Vincular con Cuenta de Google'}</span>
+                <span>{isLinkingGoogle ? 'Conectando con Google...' : '⚡ Vincular con Gmail / Cuenta de Google'}</span>
               </button>
             )}
 
@@ -1206,10 +1206,10 @@ Adjunto aquí mi comprobante de pago para la activación y entrega inmediata.`;
               </div>
             </div>
 
-            {/* Client Email Input */}
+            {/* Client Email / Gmail Input */}
             <div>
               <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                Correo Electrónico <span className="text-rose-500 font-extrabold">* (Para enviar comprobante y accesos)</span>
+                Correo Electrónico / Gmail <span className="text-rose-500 font-extrabold">* (Para enviar comprobante y accesos)</span>
               </label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">

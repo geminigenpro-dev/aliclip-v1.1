@@ -18,7 +18,6 @@ import {
   Layers,
   ShoppingBag,
   User,
-  Mail,
 } from 'lucide-react';
 import { StoreSettings } from '../types';
 import { sanitizeSearchQuery } from '../utils/securityValidator';

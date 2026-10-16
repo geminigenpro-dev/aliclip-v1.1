@@ -192,8 +192,7 @@ export async function sendRegistrationNotification(
 export async function sendSaleCredentialsNotification(
   sale: SaleRecord,
   credentials?: ServiceCredentials,
-  storeName: string = 'AliClip Store',
-  webhookUrl?: string
+  storeName: string = 'AliClip Store'
 ): Promise<NotificationResult> {
   const creds = credentials || sale.serviceCredentials || {};
   const waPhone = formatWhatsAppPhone(sale.clientPhone);

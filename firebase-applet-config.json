@@ -1,11 +1,10 @@
 {
-  "projectId": "seraphic-analog-xmn89",
-  "appId": "1:962203291315:web:bde7fa9a03e06fff42aac6",
-  "apiKey": "AIzaSyAQkfA111NRX3t3ODHuFgAlhb7_18AhljU",
-  "authDomain": "seraphic-analog-xmn89.firebaseapp.com",
-  "storageBucket": "seraphic-analog-xmn89.firebasestorage.app",
-  "messagingSenderId": "962203291315",
-  "measurementId": "",
-  "oAuthClientId": "962203291315-apbgvkqro6a5pmg3gb3s5tat2d8t4bh3.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "projectId": "alixplay-store-web",
+  "appId": "1:26438871352:web:0b5a41dafbef8db4e639cd",
+  "apiKey": "AIzaSyAzNLYJqHVkdFfWcRYn2Mi4ylhdiFsgkGk",
+  "authDomain": "alixplay-store-web.firebaseapp.com",
+  "databaseURL": "https://alixplay-store-web-default-rtdb.firebaseio.com",
+  "storageBucket": "alixplay-store-web.firebasestorage.app",
+  "messagingSenderId": "26438871352",
+  "measurementId": "G-1S28GEQYXY"
 }

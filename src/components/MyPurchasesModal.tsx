@@ -1107,7 +1107,7 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                   Vincula tu Cuenta para Acceder a tus Pedidos
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                  Inicia sesión con tu cuenta de <strong>Google</strong> o crea tu cuenta con tu correo para recibir automáticamente tus credenciales, PIN y comprobante de compra.
+                  Inicia sesión con tu cuenta de <strong>Google / Gmail</strong> o crea tu cuenta con tu correo para recibir automáticamente tus credenciales, PIN y comprobante de compra.
                 </p>
               </div>
 
@@ -1207,7 +1207,7 @@ export const MyPurchasesModal: React.FC<MyPurchasesModalProps> = ({
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                       </svg>
                     )}
-                    <span>Continuar con mi Cuenta de Google</span>
+                    <span>Continuar con mi Cuenta de Google / Gmail</span>
                   </button>
 
                   <div className="flex items-center gap-3 my-2">

@@ -124,7 +124,7 @@ export const AdminCredentialsModal: React.FC<AdminCredentialsModalProps> = ({
       await updateSaleCredentials(sale.id, creds);
 
       // 2. Despachar notificación automática a correo y WhatsApp (MailerSend / Webhook)
-      const notifRes = await sendSaleCredentialsNotification(sale, creds, storeName);
+      const notifRes = await sendSaleCredentialsNotification(sale, creds, storeName, webhookUrl);
 
       // 3. Abrir WhatsApp con el mensaje estructurado de credenciales
       if (notifRes.waUrl) {

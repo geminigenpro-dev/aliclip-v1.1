@@ -1640,46 +1640,6 @@ export const AdminTextsTab: React.FC<AdminTextsTabProps> = ({
                   </button>
                 </div>
               </div>
-
-              {/* Webhook Make.com Status & Test Action */}
-              <div className="p-3.5 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Webhook Make.com Conectado
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-mono">
-                      hook.us2.make.com
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Sincroniza registros, pedidos y credenciales automáticamente hacia Make y MailerSend (<span className="font-mono text-[10px]">aliclip.site</span>).
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      onToast('Enviando solicitud de muestra al Webhook de Make.com...');
-                      const res = await fetch('/api/admin/test-make-webhook', { method: 'POST' });
-                      const data = await res.json().catch(() => ({}));
-                      if (data.statusCode === 200) {
-                        onToast('✅ Make.com recibió la estructura correctamente (HTTP 200 Accepted).');
-                      } else if (data.statusCode === 410) {
-                        onToast('ℹ️ Estructura ya fue determinada. Activa el escenario en Make.com.');
-                      } else {
-                        onToast(`ℹ️ Webhook respondió HTTP ${data.statusCode}. Verifica tu escenario.`);
-                      }
-                    } catch {
-                      onToast('⚠️ Error contactando el servidor de prueba.');
-                    }
-                  }}
-                  className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 rounded-xl shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                >
-                  Probar Webhook Make
-                </button>
-              </div>
             </div>
           )}
         </div>

@@ -329,38 +329,21 @@ app.post('/api/notifications/registration', async (req: Request, res: Response) 
 
     console.log(`[NOTIFICACIÓN REGISTRO] Registro exitoso para: ${verifiedEmail} (Titular: ${cleanName})`);
 
-    // Sincronización asíncrona con Webhook de Make.com
-    const makeWebhookUrl =
-      process.env.MAKE_WEBHOOK_URL ||
-      'https://hook.us2.make.com/p63mga8ksfezopwnure7x128cxq8tivq';
-    const makeApiKey =
-      process.env.MAKE_API_KEY ||
-      'mlsn.3f1b4ce05eb6f5c5c3c546a623f9a62056d5ac5caa53a1659258f531081f45e4';
-
+    // Sincronización asíncrona con Webhook de Make.com (leído exclusivamente de MAKE_WEBHOOK_URL)
+    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL;
     if (makeWebhookUrl && makeWebhookUrl.startsWith('http')) {
       const asyncDispatch = async () => {
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000);
-          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-          if (makeApiKey) {
-            headers['x-make-apikey'] = makeApiKey;
-          }
-
           const makeRes = await fetch(makeWebhookUrl, {
             method: 'POST',
-            headers,
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               event: 'user_registered_success',
-              store: storeName,
               email: verifiedEmail,
               name: cleanName || undefined,
-              phone: cleanPhone || undefined,
-              clientToken,
               registeredAt: new Date().toISOString(),
-              action: 'send_welcome_email',
-              supportEmail: 'soporte@aliclip.site',
-              supportWhatsApp: '+51967693595',
             }),
             signal: controller.signal,
           });
@@ -370,7 +353,10 @@ app.post('/api/notifications/registration', async (req: Request, res: Response) 
           console.warn('[MAKE WEBHOOK ASYNC] Error al contactar webhook:', whErr?.message);
         }
       };
+      // Ejecución desacoplada en segundo plano
       setImmediate(asyncDispatch);
+    } else {
+      console.log('[MAKE WEBHOOK] MAKE_WEBHOOK_URL no configurado en entorno local; omitiendo llamada externa.');
     }
 
     return res.json({
@@ -385,91 +371,6 @@ app.post('/api/notifications/registration', async (req: Request, res: Response) 
   } catch (err: any) {
     console.error('Error en /api/notifications/registration:', err);
     return res.status(500).json({ error: 'Error procesando notificación de registro.' });
-  }
-});
-
-// Notificación de alerta de nuevo pedido a administración
-app.post('/api/notifications/order-alert', async (req: Request, res: Response) => {
-  try {
-    const {
-      token,
-      orderId,
-      accessToken,
-      clientName,
-      clientEmail,
-      clientPhone,
-      productName,
-      planName,
-      price,
-      paymentMethod,
-      storeName = 'AliClip Store',
-    } = req.body;
-
-    const saleToken = token || accessToken || orderId || `ALI-${Date.now().toString().slice(-5)}`;
-    const timestamp = new Date().toISOString();
-
-    const makeWebhookUrl =
-      process.env.MAKE_WEBHOOK_URL ||
-      'https://hook.us2.make.com/p63mga8ksfezopwnure7x128cxq8tivq';
-    const makeApiKey =
-      process.env.MAKE_API_KEY ||
-      'mlsn.3f1b4ce05eb6f5c5c3c546a623f9a62056d5ac5caa53a1659258f531081f45e4';
-
-    if (makeWebhookUrl && makeWebhookUrl.startsWith('http')) {
-      const asyncDispatch = async () => {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-          if (makeApiKey) {
-            headers['x-make-apikey'] = makeApiKey;
-          }
-
-          const makeRes = await fetch(makeWebhookUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              event: 'admin_order_alert',
-              store: storeName,
-              token: saleToken,
-              orderId: saleToken,
-              accessToken: saleToken,
-              client_name: clientName,
-              clientName,
-              client_email: clientEmail,
-              clientEmail,
-              client_phone: clientPhone,
-              clientPhone,
-              product_name: productName,
-              productName,
-              plan_name: planName,
-              planName,
-              price: Number(price) || 0,
-              payment_method: paymentMethod || 'Web',
-              paymentMethod: paymentMethod || 'Web',
-              created_at: timestamp,
-              timestamp,
-            }),
-            signal: controller.signal,
-          });
-          clearTimeout(timeoutId);
-          console.log(`[MAKE WEBHOOK ORDER ALERT] Estado: ${makeRes.status} ${makeRes.statusText}`);
-        } catch (whErr: any) {
-          console.warn('[MAKE WEBHOOK ORDER ALERT] Error:', whErr?.message);
-        }
-      };
-      setImmediate(asyncDispatch);
-    }
-
-    return res.json({
-      success: true,
-      orderId: saleToken,
-      timestamp,
-      message: `Alerta de nuevo pedido enviada a administración y webhook de Make.com.`,
-    });
-  } catch (err: any) {
-    console.error('Error en /api/notifications/order-alert:', err);
-    return res.status(500).json({ error: 'Error procesando alerta de pedido.' });
   }
 });
 
@@ -509,52 +410,6 @@ app.post('/api/notifications/sale-credentials', (req: Request, res: Response) =>
     const cleanProduct = sanitizeStrictText(productName, 100);
     const token = accessToken || saleId || 'ALI-VIP';
 
-    // Despacho a Make.com
-    const makeWebhookUrl =
-      process.env.MAKE_WEBHOOK_URL ||
-      'https://hook.us2.make.com/p63mga8ksfezopwnure7x128cxq8tivq';
-    const makeApiKey =
-      process.env.MAKE_API_KEY ||
-      'mlsn.3f1b4ce05eb6f5c5c3c546a623f9a62056d5ac5caa53a1659258f531081f45e4';
-
-    if (makeWebhookUrl && makeWebhookUrl.startsWith('http')) {
-      const asyncDispatch = async () => {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
-          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-          if (makeApiKey) headers['x-make-apikey'] = makeApiKey;
-
-          const makeRes = await fetch(makeWebhookUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              event: 'sale_credentials_delivered',
-              store: storeName,
-              token,
-              saleId: token,
-              accessToken: token,
-              clientName: cleanName,
-              clientEmail: cleanEmail,
-              clientPhone: cleanPhone,
-              productName: cleanProduct,
-              planName: planName || '',
-              price: Number(price) || 0,
-              expirationDate: expirationDate || '',
-              credentials: credentials || {},
-              timestamp: new Date().toISOString(),
-            }),
-            signal: controller.signal,
-          });
-          clearTimeout(timeoutId);
-          console.log(`[MAKE WEBHOOK CREDENTIALS] Estado: ${makeRes.status} ${makeRes.statusText}`);
-        } catch (whErr: any) {
-          console.warn('[MAKE WEBHOOK CREDENTIALS] Error:', whErr?.message);
-        }
-      };
-      setImmediate(asyncDispatch);
-    }
-
     console.log(`[NOTIFICACIÓN CREDENCIALES] Venta confirmada: ${cleanProduct} (${token}) enviada a cliente ${cleanName} [Correo: ${cleanEmail || 'N/A'}, WhatsApp: ${cleanPhone}]`);
 
     return res.json({
@@ -569,57 +424,6 @@ app.post('/api/notifications/sale-credentials', (req: Request, res: Response) =>
   } catch (err: any) {
     console.error('Error en /api/notifications/sale-credentials:', err);
     return res.status(500).json({ error: 'Error procesando despacho de credenciales.' });
-  }
-});
-
-// Endpoint de prueba directa del Webhook de Make.com
-app.post('/api/admin/test-make-webhook', async (_req: Request, res: Response) => {
-  const makeWebhookUrl =
-    process.env.MAKE_WEBHOOK_URL ||
-    'https://hook.us2.make.com/p63mga8ksfezopwnure7x128cxq8tivq';
-  const makeApiKey =
-    process.env.MAKE_API_KEY ||
-    'mlsn.3f1b4ce05eb6f5c5c3c546a623f9a62056d5ac5caa53a1659258f531081f45e4';
-
-  try {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (makeApiKey) headers['x-make-apikey'] = makeApiKey;
-
-    const samplePayload = {
-      event: 'user_registered_success',
-      store: 'AliClip Store',
-      name: 'Cliente Prueba Make',
-      email: 'prueba.make@aliclip.site',
-      phone: '+51987654321',
-      clientToken: `CLI-${Date.now().toString().slice(-5)}`,
-      registeredAt: new Date().toISOString(),
-      action: 'send_welcome_email',
-      supportEmail: 'soporte@aliclip.site',
-      supportWhatsApp: '+51967693595',
-    };
-
-    const makeRes = await fetch(makeWebhookUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(samplePayload),
-    });
-
-    const responseText = await makeRes.text();
-
-    return res.json({
-      success: makeRes.ok || makeRes.status === 200,
-      statusCode: makeRes.status,
-      statusText: makeRes.statusText,
-      webhookUrl: makeWebhookUrl,
-      hasApiKey: Boolean(makeApiKey),
-      responseBody: responseText,
-      sampleSent: samplePayload,
-    });
-  } catch (err: any) {
-    return res.status(500).json({
-      success: false,
-      error: err?.message || 'Error probando webhook de Make.com',
-    });
   }
 });
 
